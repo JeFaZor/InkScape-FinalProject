@@ -1,0 +1,34 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Build directories
+/dist
+/build
+
+general medium peafowl-backend/google-credentials.json
+general medium peafowl-backend/.env
+general medium peafowl-backend/.env.local
+general medium peafowl-backend/.env.development
+general medium peafowl-backend/.env.test
+general medium peafowl-backend/.env.production
+general medium peafowl-backend/logs
+general medium peafowl-backend/*.log
+general medium peafowl-backend/dist
+general medium peafowl-backend/build
