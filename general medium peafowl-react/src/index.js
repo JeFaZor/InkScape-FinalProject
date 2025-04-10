@@ -19,6 +19,7 @@ import TestComponent from './components/TestComponent';
 
 
 
+
 const App = () => {
   return (
     <Router>
@@ -29,6 +30,7 @@ const App = () => {
         <Route component={GetStarted} path="/get-started" />
         <Route component={AuthScreen} path="/auth" />
         <Route component={NotFound} path="**" />
+        
         
         <Redirect to="**" />
       </Switch>

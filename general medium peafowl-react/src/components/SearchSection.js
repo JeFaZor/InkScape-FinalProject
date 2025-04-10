@@ -9,7 +9,7 @@ import SearchResults from './search-results/SearchResults';
 // Import tattoo style images (kept from original)
 import traditional from './assets/tat1.jpg';
 import newSchool from './assets/tat2.png';
-import anime from './assets/tat3.png';
+import japanese from './assets/tat3.png';
 import fineline from './assets/tat4.jpg';
 import geometric from './assets/tat5.jpg';
 import microRealism from './assets/tat6.jpg';
@@ -23,7 +23,7 @@ import trashPolka from './assets/tat12.jpg';
 const genres = [
   { name: 'Traditional', image: traditional },
   { name: 'New School', image: newSchool },
-  { name: 'Anime', image: anime },
+  { name: 'Japanese', image: japanese },
   { name: 'Fineline', image: fineline },
   { name: 'Geometric', image: geometric },
   { name: 'Micro Realism', image: microRealism },
@@ -139,7 +139,8 @@ const SearchSection = () => {
   };
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto">
+    <div className="relative w-full max-w-8xl mx-auto"> 
+
       <div className={`relative w-full max-w-2xl mx-auto ${showStyleFilter ? 'mb-80' : 'mb-0'}`}>        {/* Main Search Options */}
         <div className="flex flex-col space-y-4">
           {/* Text Search */}
@@ -376,7 +377,11 @@ const SearchSection = () => {
 
 
       </div>
-      {hasSearched && <SearchResults />}
+      <div className="w-full" style={{ width: '100%', maxWidth: '100%' }}>
+
+  {hasSearched && <SearchResults />}
+</div>
+    
     </div>
   );
 };

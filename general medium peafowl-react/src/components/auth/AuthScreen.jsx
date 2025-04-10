@@ -4,13 +4,10 @@ import SignInForm from './SignInForm';
 import SignUpForm from './SignUpForm';
 import supabase from '../config/supabaseClient';
 
-
-
 const AuthScreen = () => {
-  
   const [isLogin, setIsLogin] = useState(true);
   const [userType, setUserType] = useState('client');
-  const [error, setError] = useState('');  // Added error state
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -18,6 +15,7 @@ const AuthScreen = () => {
     location: '',
     styles: []
   });
+  
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -25,6 +23,11 @@ const AuthScreen = () => {
         session,
         error
       });
+      
+      // אם המשתמש כבר מחובר, נעביר אותו לדף הבית
+      if (session) {
+        window.location.href = '/dashboard';
+      }
     };
     
     checkSession();
@@ -35,7 +38,26 @@ const AuthScreen = () => {
     setError('');
     
     try {
-      if (!isLogin) {
+      if (isLogin) {
+        // טיפול בהתחברות
+        console.log('%c Starting sign in process...', 'color: #bada55; font-weight: bold');
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        if (error) {
+          console.error('%c Sign in Error:', 'color: #FF5252; font-weight: bold', error);
+          throw error;
+        }
+        
+        console.log('%c Sign in Successful:', 'color: #4CAF50; font-weight: bold', data);
+        
+        // לאחר התחברות מוצלחת, נעביר את המשתמש לדף הבית
+        window.location.href = '/dashboard';
+      } else {
+        // טיפול בהרשמה - הקוד הקיים שלך להרשמה
         console.log('%c Starting signup process...', 'color: #bada55; font-weight: bold');
 
         const userData = {
@@ -103,8 +125,7 @@ const AuthScreen = () => {
       });
       setError(error.message);
     }
-};
-
+  };
 
   const switchMode = () => {
     setIsLogin(!isLogin);
@@ -195,7 +216,7 @@ const AuthScreen = () => {
                 <div className="w-full border-t border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 text-gray-400 bg-gray-900">or</span>
+                <span className="px-2 text-gray-400 bg-gray-900">או</span>
               </div>
             </div>
 

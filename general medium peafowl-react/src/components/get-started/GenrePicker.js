@@ -1,17 +1,17 @@
-import React, { useState } from 'react'; // Add useState import
-
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Tooltip as ReactTooltip } from 'react-tooltip';
-import 'react-tooltip/dist/react-tooltip.css'; // Import the tooltip CSS
+import 'react-tooltip/dist/react-tooltip.css';
 
 const colors = {
-    background: '#0f0312', // Deep, almost black purple
-    containerBg: '#170720', // Very dark, rich purple
-    borderColor: '#4f2175', // Deep, muted purple border
-    hoverEffect: 'rgba(94, 20, 135, 0.8)', // Deep purple with opacity
-    textColor: '#D1C4E9', // Soft lavender for text
-    shadowColor: 'rgba(64, 0, 64, 0.5)' // Deep purple shadow
-  };
+  background: '#0f0312',
+  containerBg: '#170720',
+  borderColor: '#4f2175',
+  hoverEffect: 'rgba(94, 20, 135, 0.8)',
+  textColor: '#D1C4E9',
+  shadowColor: 'rgba(64, 0, 64, 0.5)'
+};
+
 const GenrePickerContainer = styled.div`
   display: flex;
   flex-direction: row;
@@ -30,7 +30,6 @@ const GenrePickerContainer = styled.div`
   overflow-x: auto;
   white-space: nowrap;
 `;
-
 
 const GenreImageContainer = styled.div`
   width: 120px;
@@ -77,30 +76,121 @@ const GenreImage = styled.img`
   }
 `;
 
-
+// Memomized image component to prevent unnecessary re-renders
+const MemoizedGenreImage = React.memo(({ src, alt, onError, onLoad }) => {
+  return (
+    <GenreImage
+      src={src}
+      alt={alt}
+      onError={onError}
+      onLoad={onLoad}
+    />
+  );
+});
 
 const GenrePicker = ({ genres, onSelectGenre }) => {
-    const [hoveredGenre, setHoveredGenre] = useState(null); // Move useState inside the component
+  const [hoveredGenre, setHoveredGenre] = useState(null);
+  const [imageCache, setImageCache] = useState({});
+  const [loading, setLoading] = useState(true);
 
-    return (
-        <GenrePickerContainer>
-            {genres.map((genre, index) => (
-                <GenreImageContainer
-                    key={index}
-                    onMouseEnter={() => setHoveredGenre(genre.name)}
-                    onMouseLeave={() => setHoveredGenre(null)}
-                    onClick={() => onSelectGenre(genre)}
-                    data-tooltip-id="genre-tooltip"
-                >
-                    <GenreImage src={genre.image} alt={genre.name} />
-                    <span style={{ marginTop: '8px',  color: '#fff', fontSize: '14px', textAlign: 'center', fontFamily: 'Raleway, sans-serif' }}>{genre.name}</span>
+  // Preload all images to avoid loading issues
+  useEffect(() => {
+    const preloadImages = async () => {
+      setLoading(true);
+      const cache = {};
+      
+      try {
+        await Promise.all(
+          genres.map((genre) => {
+            return new Promise((resolve) => {
+              const img = new Image();
+              
+              img.onload = () => {
+                cache[genre.name] = {
+                  loaded: true,
+                  src: genre.image
+                };
+                resolve();
+              };
+              
+              img.onerror = () => {
+                console.warn(`Failed to load image for genre: ${genre.name}`);
+                cache[genre.name] = {
+                  loaded: false,
+                  src: '/fallback-image.jpg' // Default fallback image
+                };
+                resolve();
+              };
+              
+              img.src = genre.image;
+            });
+          })
+        );
+        
+        setImageCache(cache);
+      } catch (error) {
+        console.error("Error preloading images:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    preloadImages();
+  }, [genres]);
 
-                </GenreImageContainer>
-            ))}
-        </GenrePickerContainer>
-    );
+  // Memoized error handler to prevent recreating on each render
+  const handleImageError = useCallback((genreName) => {
+    console.warn(`Image error occurred for genre: ${genreName}`);
+    setImageCache(prev => ({
+      ...prev,
+      [genreName]: {
+        loaded: false,
+        src: '/fallback-image.jpg'
+      }
+    }));
+  }, []);
+
+  // Get the appropriate image source (from cache or original)
+  const getImageSrc = useCallback((genre) => {
+    if (imageCache[genre.name]) {
+      return imageCache[genre.name].src;
+    }
+    return genre.image;
+  }, [imageCache]);
+
+  if (loading) {
+    return <div style={{ color: 'white', textAlign: 'center', padding: '20px' }}>Loading genres...</div>;
+  }
+
+  return (
+    <GenrePickerContainer>
+      {genres.map((genre, index) => (
+        <GenreImageContainer
+          key={`genre-${genre.name}-${index}`}
+          onMouseEnter={() => setHoveredGenre(genre.name)}
+          onMouseLeave={() => setHoveredGenre(null)}
+          onClick={() => onSelectGenre(genre)}
+          data-tooltip-id="genre-tooltip"
+        >
+          <MemoizedGenreImage
+            src={getImageSrc(genre)}
+            alt={genre.name}
+            onError={() => handleImageError(genre.name)}
+          />
+          <span style={{ 
+            marginTop: '8px', 
+            color: '#fff', 
+            fontSize: '14px', 
+            textAlign: 'center', 
+            fontFamily: 'Raleway, sans-serif' 
+          }}>
+            {genre.name}
+          </span>
+        </GenreImageContainer>
+      ))}
+      <ReactTooltip id="genre-tooltip" place="top" />
+    </GenrePickerContainer>
+  );
 };
 
-
-
-export default GenrePicker;
+export default React.memo(GenrePicker);

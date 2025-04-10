@@ -1,0 +1,2 @@
+INSERT INTO "public"."artist_profiles" ("id", "user_id", "instagram_handle", "bio", "contact_info", "location", "avg_rating", "service_area", "last_sync", "is_verified", "created_at") VALUES ('429a5656-5cf8-43bc-8ecb-f944251cee1f', '143e888a-aaf0-494e-a9b5-09728b155aac', 'https://www.instagram.com/dani_ginzburg', 'Owner of John Boy Tattoo
+', ', '(32.0947197572856,34.7764750473506)', '0', '0', '2025-03-23 07:44:35+00', 'true', '2025-03-23 07:44:44+00');
