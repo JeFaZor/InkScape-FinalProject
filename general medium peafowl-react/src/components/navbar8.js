@@ -6,11 +6,13 @@ import { useHistory } from 'react-router-dom';
 import PropTypes from 'prop-types'
 
 import './navbar8.css'
+import { useAuth } from './context/AuthContext';
 
 const Navbar8 = (props) => {
   const history = useHistory();
 
   const [link5DropdownVisible, setLink5DropdownVisible] = useState(false)
+  const { user, isAuthenticated, signOut } = useAuth();
   const [link5AccordionOpen, setLink5AccordionOpen] = useState(false)
   return (
     <header className="navbar8-container1">
@@ -81,24 +83,59 @@ const Navbar8 = (props) => {
             </div>
           </nav>
           <div className="navbar8-buttons1">
-            <button className="navbar8-action11 thq-button-filled thq-button-animated">
-              <span className="thq-body-small">
-                {props.action1 ?? (
-                  <Fragment>
-                    <span className="navbar8-text18">Sign Up</span>
-                  </Fragment>
-                )}
-              </span>
-            </button>
-            <button
-              className="navbar8-action21 thq-button-outline thq-button-animated"
-              onClick={() => history.push('/auth')}
-            >
-              <span className="thq-body-small">
-                <span className="navbar8-text25">Log In</span>
-              </span>
-            </button>
-          </div>
+  {isAuthenticated ? (
+    <div className="flex items-center space-x-3">
+      <div className="text-white bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center">
+        {user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+      </div>
+      <div className="relative group">
+        <button className="text-gray-300 hover:text-white flex items-center space-x-1">
+          <span>{user?.first_name || user?.email?.split('@')[0] || 'User'}</span>
+          <svg viewBox="0 0 1024 1024" className="w-4 h-4">
+            <path d="M298 426h428l-214 214z"></path>
+          </svg>
+        </button>
+        <div className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-sm rounded-md shadow-lg border border-purple-600/20 py-1 hidden group-hover:block z-50">
+          <button 
+            onClick={() => history.push('/dashboard')}
+            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
+          >
+            Dashboard
+          </button>
+          <button 
+            onClick={signOut}
+            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : (
+    <>
+      <button 
+        className="navbar8-action11 thq-button-filled thq-button-animated"
+        onClick={() => history.push('/auth')}
+      >
+        <span className="thq-body-small">
+          {props.action1 ?? (
+            <Fragment>
+              <span className="navbar8-text18">Sign Up</span>
+            </Fragment>
+          )}
+        </span>
+      </button>
+      <button
+        className="navbar8-action21 thq-button-outline thq-button-animated"
+        onClick={() => history.push('/auth')}
+      >
+        <span className="thq-body-small">
+          <span className="navbar8-text25">Log In</span>
+        </span>
+      </button>
+    </>
+  )}
+</div>
         </div>
         <div data-thq="thq-burger-menu" className="navbar8-burger-menu">
           <svg viewBox="0 0 1024 1024" className="navbar8-icon14">

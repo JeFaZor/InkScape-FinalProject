@@ -1,7 +1,7 @@
-// geminiStyleAnalyzer.js - גרסה מצומצמת ומהירה
+// geminiStyleAnalyzer.js - compact and fast version
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// שמות תצוגה של סגנונות קעקועים
+// Display names of tattoo styles
 const styleDisplayNames = {
   'traditional': 'Traditional',
   'new_school': 'New School',
@@ -21,7 +21,7 @@ const styleDisplayNames = {
 };
 
 /**
- * אנליזת סגנון קעקוע באמצעות Gemini API - גרסה מהירה ומצומצמת
+ * Tattoo style analysis using Gemini API - fast and compact version
  */
 async function analyzeWithGemini(imageBuffer, requestedStyles = null) {
   try {
@@ -29,7 +29,7 @@ async function analyzeWithGemini(imageBuffer, requestedStyles = null) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const imageBase64 = imageBuffer.toString('base64');
     
-    // פרומפט מצומצם עם הדגשת Trash Polka
+    // Compact prompt with emphasis on Trash Polka
     const prompt = `
     Identify the tattoo style from: ${Object.values(styleDisplayNames).join(', ')}.
     
@@ -50,16 +50,16 @@ async function analyzeWithGemini(imageBuffer, requestedStyles = null) {
     const response = await result.response;
     const text = response.text().trim();
     
-    // חיפוש התאמה בסגנונות
+    // Search for style match
     let matchedStyle = null;
     let styleDisplayName = text;
     
-    // הדגשה מיוחדת ל-Trash Polka
+    // Special emphasis on Trash Polka
     if (text.toLowerCase().includes('trash polka')) {
       matchedStyle = 'trash_polka';
       styleDisplayName = 'Trash Polka';
     } else {
-      // חיפוש התאמה בשאר הסגנונות
+      // Search for matches in other styles
       for (const [key, value] of Object.entries(styleDisplayNames)) {
         if (value.toLowerCase() === text.toLowerCase() || 
             text.toLowerCase().includes(value.toLowerCase())) {
@@ -70,7 +70,7 @@ async function analyzeWithGemini(imageBuffer, requestedStyles = null) {
       }
     }
     
-    // אם לא נמצאה התאמה, השתמש בברירת מחדל
+    // If no match found, use default
     if (!matchedStyle) {
       matchedStyle = 'realism';
       styleDisplayName = 'Realism';
@@ -94,7 +94,7 @@ async function analyzeWithGemini(imageBuffer, requestedStyles = null) {
 }
 
 /**
- * בדיקה מהירה האם התמונה היא Trash Polka
+ * Quick check if the image is Trash Polka
  */
 async function quickTrashPolkaCheck(imageBuffer) {
   try {
@@ -126,10 +126,10 @@ async function quickTrashPolkaCheck(imageBuffer) {
 }
 
 /**
- * שיטת ניתוח מהירה
+ * Fast analysis method
  */
 async function fastStyleAnalysis(imageBuffer, requestedStyles = null) {
-  // בדיקה מהירה האם זה Trash Polka
+  // Quick check if it's Trash Polka
   const isTrashPolka = await quickTrashPolkaCheck(imageBuffer);
   
   if (isTrashPolka) {
@@ -141,12 +141,12 @@ async function fastStyleAnalysis(imageBuffer, requestedStyles = null) {
     };
   }
   
-  // אם לא, הפעל את הניתוח הרגיל
+  // If not, run the regular analysis
   return analyzeWithGemini(imageBuffer, requestedStyles);
 }
 
 /**
- * ניתוח מאפייני תמונה - גרסה מצומצמת
+ * Image feature analysis - compact version
  */
 async function extractImageFeaturesWithGemini(imageBuffer) {
   return {
@@ -162,7 +162,7 @@ async function extractImageFeaturesWithGemini(imageBuffer) {
 }
 
 /**
- * ניתוח תגים - גרסה מצומצמת
+ * Tag analysis - compact version
  */
 async function analyzeTagsWithGemini(imageBuffer) {
   try {
@@ -185,7 +185,7 @@ async function analyzeTagsWithGemini(imageBuffer) {
     const response = await result.response;
     const text = response.text().trim();
     
-    // פירוק התשובה לרשימת תגים
+    // Parse response into list of tags
     return text.split(',').map(tag => tag.trim());
   } catch (error) {
     console.error('Error analyzing tags:', error);

@@ -26,7 +26,7 @@ const AuthScreen = () => {
       
       // אם המשתמש כבר מחובר, נעביר אותו לדף הבית
       if (session) {
-        window.location.href = '/dashboard';
+        window.location.href = '/';
       }
     };
     
@@ -55,7 +55,7 @@ const AuthScreen = () => {
         console.log('%c Sign in Successful:', 'color: #4CAF50; font-weight: bold', data);
         
         // לאחר התחברות מוצלחת, נעביר את המשתמש לדף הבית
-        window.location.href = '/dashboard';
+        window.location.href = '/';
       } else {
         // טיפול בהרשמה - הקוד הקיים שלך להרשמה
         console.log('%c Starting signup process...', 'color: #bada55; font-weight: bold');
@@ -216,7 +216,7 @@ const AuthScreen = () => {
                 <div className="w-full border-t border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 text-gray-400 bg-gray-900">או</span>
+                <span className="px-2 text-gray-400 bg-gray-900">or</span>
               </div>
             </div>
 
