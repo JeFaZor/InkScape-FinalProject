@@ -11,7 +11,7 @@ import {
 import './style.css';
 import Home from './views/home';
 import NotFound from './views/not-found';
-import GetStarted from './components/get-started/get-started';
+
 import Navbar8 from './components/navbar8';
 import AuthScreen from './components/auth/AuthScreen';
 import TestComponent from './components/TestComponent';
@@ -27,7 +27,7 @@ const App = () => {
         <Switch>
           <Route component={TestComponent} path="/test" />
           <Route component={Home} exact path="/" />
-          <Route component={GetStarted} path="/get-started" />
+      
           <Route component={AuthScreen} path="/auth" />
           
           {/* Protected routes - for pages that require authentication */}

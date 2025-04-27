@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Instagram } from 'lucide-react';
 import SignInForm from './SignInForm';
 import SignUpForm from './SignUpForm';
-import supabase from '../config/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 
 const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);

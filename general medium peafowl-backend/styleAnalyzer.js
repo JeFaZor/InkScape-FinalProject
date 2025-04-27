@@ -1,9 +1,9 @@
-// מיפוי סגנונות קעקועים עם מילות מפתח והגדרות
+
 const tattooStylesMap = {
     'traditional': {
       keywords: ['traditional tattoo', 'old school tattoo', 'american traditional', 'classic tattoo', 'sailor jerry', 'bold lines', 'bold outlines', 'nautical', 'anchor tattoo', 'eagle tattoo', 'sailor tattoo', 'classic american'],
       negativeKeywords: ['fine line', 'realistic', 'watercolor', 'geometric', 'dot work', 'gothic', 'horror'],
-      weight: 1.3  // הגדלת המשקל לסגנון traditional
+      weight: 1.3  
     },
     'new_school': {
       keywords: ['new school', 'cartoon tattoo', 'colorful cartoon', 'exaggerated', 'bold cartoon', 'caricature', 'graffiti style', 'comic tattoo', 'animated', 'vibrant cartoon'],

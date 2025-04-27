@@ -1,9 +1,10 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
-import { Search, Image, MapPin, Filter, Tag, X } from 'lucide-react';
+import { Search, Image, MapPin, Filter, Tag, X, Loader2 } from 'lucide-react';
 import GenrePicker from './get-started/GenrePicker';
 import LocationSearch from './LocationSearch/LocationSearch';
 import SearchResults from './search-results/SearchResults';
+import { useAuth } from './context/AuthContext';
 
 
 // Import tattoo style images (kept from original)
@@ -50,6 +51,7 @@ const tags = [
 
 
 const SearchSection = () => {
+  const { user } = useAuth();
   const [tagSearchTerm, setTagSearchTerm] = React.useState('');
   const filteredTags = React.useMemo(() => {
     return tags.filter(tag =>
@@ -68,20 +70,29 @@ const SearchSection = () => {
   const [showTagFilter, setShowTagFilter] = React.useState(false);
   const [selectedTags, setSelectedTags] = React.useState([]);
   const [hasSearched, setHasSearched] = React.useState(false);
+  const [isSearching, setIsSearching] = React.useState(false);
+  
 
   // Modified handleSearch
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.append('q', searchTerm);
-    if (selectedStyle) params.append('style', selectedStyle.name);
-    if (selectedLocation) params.append('location', selectedLocation);
-    if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
-    
-    // Update URL without navigation
-    window.history.pushState({}, '', `?${params.toString()}`);
-    
-    // Show search results
-    setHasSearched(true);
+  const handleSearch = async () => {
+    try {
+      setIsSearching(true);
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('q', searchTerm);
+      if (selectedStyle) params.append('style', selectedStyle.name);
+      if (selectedLocation) params.append('location', selectedLocation);
+      if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
+      
+      // Update URL without navigation
+      window.history.pushState({}, '', `?${params.toString()}`);
+      
+      // Show search results
+      setHasSearched(true);
+    } catch (error) {
+      console.error('Error during search:', error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleImageUpload = async (event) => {
@@ -314,10 +325,19 @@ const SearchSection = () => {
 
           <button
             onClick={handleSearch}
-            className="flex items-center justify-center gap-2 w-fit mx-auto py-3 px-7 rounded-lg bg-purple-600/80 text-white hover:bg-purple-600 transition-all"
+            disabled={isSearching}
+            className={`flex items-center justify-center gap-2 w-fit mx-auto py-3 px-7 rounded-lg ${
+              isSearching 
+                ? 'bg-gray-600 cursor-not-allowed' 
+                : 'bg-purple-600/80 hover:bg-purple-600'
+            } text-white transition-all`}
           >
-            <Search className="w-5 h-5" />
-            Search Artists
+            {isSearching ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Search className="w-5 h-5" />
+            )}
+            {isSearching ? 'Searching...' : 'Search Artists'}
           </button>
 
           {/* Divider with "or" text */}
