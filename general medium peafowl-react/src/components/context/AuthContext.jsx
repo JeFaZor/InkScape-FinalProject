@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+const USER_DATA_CACHE_KEY = 'inkscape_user_data_cache';
+
 
 // Create auth context
 const AuthContext = createContext(null);
@@ -14,12 +16,11 @@ export function AuthProvider({ children }) {
     try {
       console.log('Fetching user data for ID:', userId);
       
-      // שינוי: במקום .single(), נשתמש ב-.maybeSingle() שלא יזרוק שגיאה אם אין תוצאות
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();  // שינוי כאן
+        .maybeSingle();  
         
       if (userError) {
         console.error('Error fetching user data:', userError);
@@ -29,6 +30,22 @@ export function AuthProvider({ children }) {
       if (!userData) {
         console.log('No user data found for ID:', userId);
         return null;
+      }
+      
+
+      if (userData.user_type === 'artist') {
+     
+        const { data: artistData, error: artistError } = await supabase
+          .from('artist_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (!artistError && artistData) {
+          
+          userData.profile_image_url = artistData.profile_image_url;
+       
+        }
       }
       
       console.log('User data fetched successfully:', userData);
@@ -41,48 +58,91 @@ export function AuthProvider({ children }) {
 
   // Unified method to handle user state updates
   const updateUserState = async (session) => {
-    if (session) {
-      console.log('Setting user from session, ID:', session.user.id);
-      
-      // Fetch additional user data
-      const userData = await fetchUserData(session.user.id);
-      
-      if (userData) {
-        // Combine auth data with profile data
-        setUser({ ...session.user, ...userData });
+    try {
+      if (session) {
+        console.log('Setting user from session, ID:', session.user.id);
+
+        // Check if we have cached user data first
+        let cachedUserData = null;
+        try {
+          const cachedData = localStorage.getItem(USER_DATA_CACHE_KEY);
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            // Verify it's the same user before using cache
+            if (parsed && parsed.id === session.user.id) {
+              cachedUserData = parsed;
+              console.log('Using cached user data');
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Error reading from cache:', cacheError);
+        }
+
+        // If we have valid cached data, use it immediately
+        if (cachedUserData) {
+          setUser(cachedUserData);
+        } else {
+          // Set basic user info immediately to prevent loading state issues
+          setUser(session.user);
+        }
+
+        // Always fetch fresh data from server
+        const userData = await fetchUserData(session.user.id);
+
+        if (userData) {
+          // Create a complete user object
+          const completeUserData = { ...session.user, ...userData };
+
+          // Update state with complete data
+          setUser(completeUserData);
+          console.log('User data fully loaded:', completeUserData);
+
+          // Cache the complete user data
+          try {
+            localStorage.setItem(USER_DATA_CACHE_KEY, JSON.stringify(completeUserData));
+          } catch (cacheError) {
+            console.warn('Error caching user data:', cacheError);
+          }
+        } else {
+          console.log('No user profile data found, using basic session data');
+        }
       } else {
-        // Fallback to just session user if we couldn't get profile data
+        console.log('No session, clearing user state');
+        setUser(null);
+        // Clear cache when session ends
+        localStorage.removeItem(USER_DATA_CACHE_KEY);
+      }
+    } catch (error) {
+      console.error('Error updating user state:', error);
+      // Still set the basic user info to prevent blank state
+      if (session) {
         setUser(session.user);
       }
-    } else {
-      console.log('No session, clearing user state');
-      setUser(null);
+    } finally {
+      setLoading(false);
+      if (!initialized) setInitialized(true);
     }
-    
-    setLoading(false);
-    if (!initialized) setInitialized(true);
   };
-
   useEffect(() => {
     const initializeAuth = async () => {
       console.log('Initializing auth state...');
       setLoading(true);
-      
+
       try {
         // First, check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', error);
           setLoading(false);
           return;
         }
-        
+
         console.log('Initial session check:', session ? 'Session found' : 'No session');
-        
+
         // Handle the current session state
         await updateUserState(session);
-        
+
         // Set up auth state change listener
         const { data: authListener } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
@@ -90,7 +150,7 @@ export function AuthProvider({ children }) {
             await updateUserState(newSession);
           }
         );
-        
+
         // Return cleanup function
         return () => {
           console.log('Cleaning up auth listener');
@@ -103,26 +163,41 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     };
-    
+
     initializeAuth();
   }, []);
 
   // Sign out function
+  // Improved sign out function with better error handling and state management
   const signOut = async () => {
     try {
       console.log('Signing out user');
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        throw error;
-      }
-      
+
+      // Set user to null first to prevent UI issues during sign out
       setUser(null);
+
+      // Clear user data cache
+      localStorage.removeItem(USER_DATA_CACHE_KEY);
+
+      // Then perform the actual sign out
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Supabase signOut error:', error);
+        // Don't throw, continue with local cleanup
+      }
+
       console.log('Sign out successful');
-      window.location.href = '/';
+
+      // Redirect to home page after a slight delay
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error during sign out process:', error);
+      // Force redirect anyway in case of error
+      window.location.href = '/';
     } finally {
       setLoading(false);
     }

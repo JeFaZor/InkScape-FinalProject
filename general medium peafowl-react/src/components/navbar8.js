@@ -86,8 +86,27 @@ const Navbar8 = (props) => {
           <div className="navbar8-buttons1">
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
-                <div className="text-white bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center">
-                  {user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                <div className="relative">
+                  {user?.profile_image_url ? (
+                    // אם יש תמונת פרופיל, הצג אותה
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-500">
+                      <img
+                        src={user.profile_image_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover transform scale-125" 
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentNode.classList.add('bg-purple-600', 'flex', 'justify-center', 'items-center');
+                          e.target.parentNode.innerHTML = `<span class="text-white">${user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}</span>`;
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    // אם אין תמונת פרופיל, הצג אות ראשונה בעיגול סגול
+                    <div className="text-white bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center">
+                      {user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                    </div>
+                  )}
                 </div>
                 <div className="relative">
                   <button
@@ -125,7 +144,7 @@ const Navbar8 = (props) => {
               </div>
             ) : (
               <>
-             
+
                 <button
                   className="navbar8-action11 thq-button-filled thq-button-animated"
                   onClick={() => {
