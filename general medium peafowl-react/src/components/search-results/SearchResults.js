@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import ArtistCard from './artist-card/ArtistCard';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 /**
  * Helper function to calculate distance between two coordinates
@@ -62,25 +63,6 @@ const parseCoordinates = (coordString) => {
 };
 
 /**
- * Custom hook for getting URL parameters
- * Tracks changes to URL search parameters
- */
-const useSearchParams = () => {
-  const [searchParams, setSearchParams] = useState(new URLSearchParams(window.location.search));
-
-  useEffect(() => {
-    const handleUrlChange = () => {
-      setSearchParams(new URLSearchParams(window.location.search));
-    };
-
-    window.addEventListener('popstate', handleUrlChange);
-    return () => window.removeEventListener('popstate', handleUrlChange);
-  }, []);
-
-  return searchParams;
-};
-
-/**
  * Mapping of style names to their corresponding IDs in the database
  */
 const styleNameToIdMap = {
@@ -115,9 +97,8 @@ const styleNameToIdMap = {
  * Handles fetching and displaying artist results based on search criteria
  */
 const SearchResults = () => {
-  // Get search parameters from URL
-  const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
 
   // States
   const [artists, setArtists] = useState([]);
@@ -126,28 +107,51 @@ const SearchResults = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
-
-  // Extract search parameters
-  const searchQuery = searchParams.get('q') || '';
-  const styleName = searchParams.get('style') || '';
-  const location = searchParams.get('location') || '';
-  const tags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
   
-  // Extract location coordinates and radius
-  const coordinates = searchParams.get('coords') ? JSON.parse(searchParams.get('coords')) : null;
-  const radius = searchParams.get('radius') ? parseFloat(searchParams.get('radius')) : null;
+  // State to track current search parameters
+  const [currentSearch, setCurrentSearch] = useState('');
+
+  // Function to get search parameters from URL
+  const getSearchParams = useCallback(() => {
+    const searchParams = new URLSearchParams(location.search);
+    
+    return {
+      searchQuery: searchParams.get('q') || '',
+      styleName: searchParams.get('style') || '',
+      location: searchParams.get('location') || '',
+      tags: searchParams.get('tags')?.split(',').filter(Boolean) || [],
+      coordinates: searchParams.get('coords') ? JSON.parse(searchParams.get('coords')) : null,
+      radius: searchParams.get('radius') ? parseFloat(searchParams.get('radius')) : null
+    };
+  }, [location.search]);
+  
+  // Memoized search parameters
+  const searchParams = getSearchParams();
 
   /**
    * Fetches artists from Supabase based on search criteria
    */
-  const fetchArtists = async () => {
+  const fetchArtists = useCallback(async (resetPage = false) => {
     try {
+      // Track the new search params as string to detect changes
+      const searchParamsString = JSON.stringify(searchParams);
+      
+      // If starting a new search, reset page to 1
+      const currentPage = resetPage ? 1 : page;
+      
+      if (resetPage) {
+        setArtists([]);
+        setPage(1);
+        setHasMore(true);
+        setCurrentSearch(searchParamsString);
+      }
+      
       setIsLoading(true);
       setError(null);
 
       // Apply pagination
       const pageSize = 10;
-      const startRange = (page - 1) * pageSize;
+      const startRange = (currentPage - 1) * pageSize;
       const endRange = startRange + pageSize - 1;
 
       // Initialize an array to store artist IDs
@@ -155,8 +159,8 @@ const SearchResults = () => {
       let userMatches = [];
 
       // If we have a search query, first look for users/artists by name
-      if (searchQuery && searchQuery.trim() !== '') {
-        const searchTerm = searchQuery.trim();
+      if (searchParams.searchQuery && searchParams.searchQuery.trim() !== '') {
+        const searchTerm = searchParams.searchQuery.trim();
         
         // Search for users by name (first_name or last_name)
         const { data: matchingUsers, error: userError } = await supabase
@@ -191,15 +195,15 @@ const SearchResults = () => {
         query = query.in('user_id', userIds);
       }
       // If we have a search query but no matching users, also try bio as a fallback
-      else if (searchQuery && searchQuery.trim() !== '') {
-        query = query.or(`bio.ilike.%${searchQuery.trim()}%,instagram_handle.ilike.%${searchQuery.trim()}%`);
+      else if (searchParams.searchQuery && searchParams.searchQuery.trim() !== '') {
+        query = query.or(`bio.ilike.%${searchParams.searchQuery.trim()}%,instagram_handle.ilike.%${searchParams.searchQuery.trim()}%`);
       }
 
       // Filter by style if provided
-      if (styleName && styleName.trim() !== '') {
+      if (searchParams.styleName && searchParams.styleName.trim() !== '') {
         try {
           // Get style ID - try both as-is and lowercase for better matching
-          const styleNameInput = styleName.trim();
+          const styleNameInput = searchParams.styleName.trim();
           
           // Look up style ID in our map with more flexible matching
           let styleId = styleNameToIdMap[styleNameInput] ||
@@ -257,13 +261,13 @@ const SearchResults = () => {
       }
 
       // Filter by location string if provided but no coordinates
-      if (location && location.trim() !== '' && (!coordinates || !radius)) {
-        query = query.ilike('location', `%${location.trim()}%`);
+      if (searchParams.location && searchParams.location.trim() !== '' && (!searchParams.coordinates || !searchParams.radius)) {
+        query = query.ilike('location', `%${searchParams.location.trim()}%`);
       }
       
       // If we're not filtering by coordinates yet, apply pagination and execute query
       // Otherwise, we'll fetch all results first and filter by distance later
-      if (!coordinates || !radius) {
+      if (!searchParams.coordinates || !searchParams.radius) {
         // Apply pagination
         query = query.range(startRange, endRange);
       }
@@ -296,7 +300,7 @@ const SearchResults = () => {
       let filteredArtistsData = [...artistsData];
       let totalCount = count || 0;
       
-      if (coordinates && radius && coordinates.length === 2) {
+      if (searchParams.coordinates && searchParams.radius && searchParams.coordinates.length === 2) {
         // Filter artists by distance
         filteredArtistsData = artistsData.filter(artist => {
           // Parse artist location from string format
@@ -306,10 +310,10 @@ const SearchResults = () => {
           if (!artistCoords) return false;
           
           // Calculate distance
-          const distance = calculateDistance(coordinates, artistCoords);
+          const distance = calculateDistance(searchParams.coordinates, artistCoords);
           
           // Include artist if within radius
-          return distance <= radius;
+          return distance <= searchParams.radius;
         });
         
         // Update count for pagination
@@ -320,7 +324,7 @@ const SearchResults = () => {
       }
 
       // Update total results count on first page
-      if (page === 1) {
+      if (currentPage === 1) {
         setTotalResults(totalCount);
       }
 
@@ -387,10 +391,10 @@ const SearchResults = () => {
           
         // Calculate distance if coordinates are available
         let distance = null;
-        if (coordinates && coordinates.length === 2) {
+        if (searchParams.coordinates && searchParams.coordinates.length === 2) {
           const artistCoords = parseCoordinates(artist.location);
           if (artistCoords) {
-            distance = calculateDistance(coordinates, artistCoords);
+            distance = calculateDistance(searchParams.coordinates, artistCoords);
           }
         }
 
@@ -412,7 +416,7 @@ const SearchResults = () => {
       });
       
       // Sort by distance if we have coordinates
-      if (coordinates && coordinates.length === 2) {
+      if (searchParams.coordinates && searchParams.coordinates.length === 2) {
         formattedArtists.sort((a, b) => {
           if (a.distance === null) return 1;
           if (b.distance === null) return -1;
@@ -421,7 +425,7 @@ const SearchResults = () => {
       }
 
       // Update state
-      setArtists(prev => page === 1 ? formattedArtists : [...prev, ...formattedArtists]);
+      setArtists(prev => resetPage ? formattedArtists : [...prev, ...formattedArtists]);
       setHasMore(formattedArtists.length === pageSize);
       setError(null);
     } catch (err) {
@@ -433,25 +437,30 @@ const SearchResults = () => {
       } else {
         setError('Failed to load artists. Please try again.');
       }
+      console.error("Search error:", err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [page, searchParams]);
 
   // Reset and reload when search parameters change
   useEffect(() => {
-    setArtists([]);
-    setPage(1);
-    setHasMore(true);
-    fetchArtists();
-  }, [searchQuery, styleName, location, tags.join(','), coordinates ? JSON.stringify(coordinates) : '', radius]);
+    // Convert search params to string for comparison
+    const searchParamsString = JSON.stringify(searchParams);
+    
+    // If search parameters changed, reset the page and fetch new results
+    if (searchParamsString !== currentSearch) {
+      // Reset artists array and page number, then fetch new results
+      fetchArtists(true);
+    }
+  }, [location.search, fetchArtists, currentSearch, searchParams]);
 
   // Load more results when page changes
   useEffect(() => {
     if (page > 1 && !isLoading) {
-      fetchArtists();
+      fetchArtists(false);
     }
-  }, [page]);
+  }, [page, isLoading, fetchArtists]);
 
   // Infinite scroll detection
   useEffect(() => {
@@ -508,18 +517,18 @@ const SearchResults = () => {
         </h2>
         <p className="text-gray-400">
           Found {totalResults} artists
-          {searchQuery && ` for "${searchQuery}"`}
-          {styleName && ` in ${styleName} style`}
-          {location && ` in ${location}`}
-          {radius && coordinates && ` within ${radius}km`}
-          {tags.length > 0 && ` with tags: ${tags.join(', ')}`}
+          {searchParams.searchQuery && ` for "${searchParams.searchQuery}"`}
+          {searchParams.styleName && ` in ${searchParams.styleName} style`}
+          {searchParams.location && ` in ${searchParams.location}`}
+          {searchParams.radius && searchParams.coordinates && ` within ${searchParams.radius}km`}
+          {searchParams.tags.length > 0 && ` with tags: ${searchParams.tags.join(', ')}`}
         </p>
       </div>
 
       {/* Results grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
         {artists.map((artist, index) => (
-          <ArtistCard key={`${artist.id || index}`} artist={artist} />
+          <ArtistCard key={`${artist.id}-${index}`} artist={artist} />
         ))}
       </div>
 

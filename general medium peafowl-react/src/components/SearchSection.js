@@ -1,13 +1,12 @@
-import React from 'react';
-import { useHistory, useLocation } from 'react-router-dom'; // Added useLocation
+import React, { useState, useEffect, useMemo } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import { Search, Image, MapPin, Filter, Tag, X, Loader2 } from 'lucide-react';
 import GenrePicker from './get-started/GenrePicker';
 import LocationSearch from './LocationSearch/LocationSearch';
 import SearchResults from './search-results/SearchResults';
 import { useAuth } from './context/AuthContext';
 
-
-// Import tattoo style images (kept from original)
+// Import tattoo style images
 import traditional from './assets/tat1.jpg';
 import newSchool from './assets/tat2.png';
 import japanese from './assets/tat3.png';
@@ -48,94 +47,139 @@ const tags = [
   'Watercolor'
 ];
 
-// Custom hook to parse URL parameters
-const useQueryParams = () => {
-  const location = useLocation();
-  return React.useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return {
-      q: params.get('q') || '',
-      style: params.get('style') || '',
-      location: params.get('location') || '',
-      coords: params.get('coords') || '',
-      radius: params.get('radius') || '',
-      tags: params.get('tags') ? params.get('tags').split(',') : []
-    };
-  }, [location.search]);
-};
-
 const SearchSection = () => {
   const { user } = useAuth();
   const history = useHistory();
-  const queryParams = useQueryParams(); // Get params from URL
+  const location = useLocation();
   
-  // Initialize state from URL parameters
-  const [tagSearchTerm, setTagSearchTerm] = React.useState('');
-  const [showStyleFilter, setShowStyleFilter] = React.useState(false);
-  const [showLocationFilter, setShowLocationFilter] = React.useState(false);
-  const [showTagFilter, setShowTagFilter] = React.useState(false);
-  const [hasSearched, setHasSearched] = React.useState(false);
-  const [isSearching, setIsSearching] = React.useState(false);
+  // State initialization
+  const [tagSearchTerm, setTagSearchTerm] = useState('');
+  const [showStyleFilter, setShowStyleFilter] = useState(false);
+  const [showLocationFilter, setShowLocationFilter] = useState(false);
+  const [showTagFilter, setShowTagFilter] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [filteredGenres, setFilteredGenres] = useState(genres);
+  const [selectedImage, setSelectedImage] = useState(null);
   
-  // Initialize search terms from URL parameters
-  const [searchTerm, setSearchTerm] = React.useState(queryParams.q);
-  const [selectedStyle, setSelectedStyle] = React.useState(
-    queryParams.style ? genres.find(g => g.name === queryParams.style) || null : null
-  );
-  const [selectedLocation, setSelectedLocation] = React.useState(queryParams.location);
-  const [selectedTags, setSelectedTags] = React.useState(queryParams.tags);
+  // Initialize all search states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [locationCoordinates, setLocationCoordinates] = useState(null);
+  const [locationRadius, setLocationRadius] = useState(5);
   
-  // Add new state variables for coordinates and radius
-  const [locationCoordinates, setLocationCoordinates] = React.useState(
-    queryParams.coords ? JSON.parse(queryParams.coords) : null
-  );
-  const [locationRadius, setLocationRadius] = React.useState(
-    queryParams.radius ? parseFloat(queryParams.radius) : 5
-  );
-
-  const [filteredGenres, setFilteredGenres] = React.useState(genres);
-  const [selectedImage, setSelectedImage] = React.useState(null);
   const fileInputRef = React.useRef(null);
 
+  // Parse URL parameters on component mount and when URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    
+    // Get search parameters from URL
+    const queryTerm = params.get('q') || '';
+    const styleParam = params.get('style') || '';
+    const locationParam = params.get('location') || '';
+    const tagsParam = params.get('tags') ? params.get('tags').split(',') : [];
+    const coordsParam = params.get('coords') || '';
+    const radiusParam = params.get('radius') || '5';
+    
+    // Update state only if the URL parameters are different from current state
+    // This prevents infinite loops or unnecessary updates
+    if (queryTerm !== searchTerm) setSearchTerm(queryTerm);
+    
+    // Handle style parameter
+    if (styleParam) {
+      const matchedStyle = genres.find(g => g.name === styleParam);
+      if (matchedStyle && (!selectedStyle || selectedStyle.name !== styleParam)) {
+        setSelectedStyle(matchedStyle);
+      }
+    } else if (selectedStyle) {
+      setSelectedStyle(null);
+    }
+    
+    // Handle location parameter
+    if (locationParam !== selectedLocation) {
+      setSelectedLocation(locationParam);
+    }
+    
+    // Handle coordinates parameter
+    if (coordsParam) {
+      try {
+        const coords = JSON.parse(coordsParam);
+        if (!locationCoordinates || 
+            coords[0] !== locationCoordinates[0] || 
+            coords[1] !== locationCoordinates[1]) {
+          setLocationCoordinates(coords);
+        }
+      } catch (e) {
+        console.error("Failed to parse coordinates", e);
+      }
+    } else if (locationCoordinates) {
+      setLocationCoordinates(null);
+    }
+    
+    // Handle radius parameter
+    if (radiusParam) {
+      const radius = parseFloat(radiusParam);
+      if (!isNaN(radius) && radius !== locationRadius) {
+        setLocationRadius(radius);
+      }
+    }
+    
+    // Handle tags parameter
+    if (JSON.stringify(tagsParam) !== JSON.stringify(selectedTags)) {
+      setSelectedTags(tagsParam);
+    }
+    
+    // If there are any search parameters, consider it a search
+    if (queryTerm || styleParam || locationParam || tagsParam.length > 0) {
+      setHasSearched(true);
+    }
+  }, [location.search]);
+
   // Filter tags based on search term
-  const filteredTags = React.useMemo(() => {
+  const filteredTags = useMemo(() => {
     return tags.filter(tag =>
       tag.toLowerCase().includes(tagSearchTerm.toLowerCase())
     );
   }, [tagSearchTerm]);
 
-  // Update URL params and trigger search
-  const handleSearch = async () => {
-    try {
-      setIsSearching(true);
-      const params = new URLSearchParams();
+  // Handle search button click
+  const handleSearch = () => {
+    // Prevent search if already searching
+    if (isSearching) return;
+    
+    setIsSearching(true);
+    
+    // Create search parameters object
+    const params = new URLSearchParams();
+    
+    // Add parameters if they exist
+    if (searchTerm) params.set('q', searchTerm);
+    if (selectedStyle) params.set('style', selectedStyle.name);
+    if (selectedLocation) {
+      params.set('location', selectedLocation);
       
-      if (searchTerm) params.append('q', searchTerm);
-      if (selectedStyle) params.append('style', selectedStyle.name);
-      if (selectedLocation) {
-        params.append('location', selectedLocation);
-        
-        // Add coordinates and radius as separate parameters
-        if (locationCoordinates && locationCoordinates.length === 2) {
-          params.append('coords', JSON.stringify(locationCoordinates));
-          params.append('radius', locationRadius.toString());
-        }
+      // Add coordinates and radius
+      if (locationCoordinates && locationCoordinates.length === 2) {
+        params.set('coords', JSON.stringify(locationCoordinates));
+        params.set('radius', locationRadius.toString());
       }
-      if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
-      
-      // Navigate to the URL with search parameters
-      // This is the key change - using history.push instead of window.history.pushState
-      history.push(`?${params.toString()}`);
-      
-      // Show search results
-      setHasSearched(true);
-    } catch (error) {
-      console.error('Error during search:', error);
-    } finally {
-      setIsSearching(false);
     }
+    if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
+    
+    // Update URL with new search parameters - this will trigger the useEffect above
+    const searchString = params.toString();
+    const newUrl = searchString ? `?${searchString}` : '/';
+    history.push(newUrl);
+    
+    // Always set hasSearched to true after search
+    setHasSearched(true);
+    setIsSearching(false);
   };
 
+  // Handle image upload and analysis
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -158,10 +202,10 @@ const SearchSection = () => {
         const result = await response.json();
         
         // Find matching genre
-        const matchedGenre = genres.find(genre => genre.name === result.style);
+        const matchedStyle = genres.find(genre => genre.name === result.style);
         
-        if (matchedGenre) {
-          setSelectedStyle(matchedGenre);
+        if (matchedStyle) {
+          setSelectedStyle(matchedStyle);
           setShowStyleFilter(false);
         }
         
@@ -180,78 +224,56 @@ const SearchSection = () => {
     }
   };
 
+  // Reset all search parameters
   const handleReset = () => {
+    // Reset all state values
     setSearchTerm('');
     setSelectedStyle(null);
     setSelectedLocation('');
-    setLocationCoordinates(null); // Reset coordinates
-    setLocationRadius(5); // Reset radius to default
-    setFilteredGenres(genres);
-    setSelectedImage(null);
+    setLocationCoordinates(null);
+    setLocationRadius(5);
     setSelectedTags([]);
+    setSelectedImage(null);
     
-    // Clear URL parameters on reset
+    // Reset URL to home page
     history.push('/');
+    
+    // Close any open filters
+    setShowStyleFilter(false);
+    setShowLocationFilter(false);
+    setShowTagFilter(false);
   };
 
-  // Update state when URL params change
-  React.useEffect(() => {
-    if (queryParams.q !== searchTerm) {
-      setSearchTerm(queryParams.q);
+  // Handle style selection
+  const handleStyleSelect = (style) => {
+    setSelectedStyle(style);
+    setShowStyleFilter(false);
+  };
+
+  // Handle location selection
+  const handleLocationSelect = (locationData) => {
+    setSelectedLocation(locationData.address);
+    setLocationCoordinates(locationData.coordinates);
+    setLocationRadius(locationData.radius);
+    setShowLocationFilter(false);
+  };
+
+  // Handle tag selection
+  const handleTagSelect = (tag) => {
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags(prev => [...prev, tag]);
     }
-    
-    // Update selected style based on URL
-    if (queryParams.style) {
-      const style = genres.find(g => g.name === queryParams.style);
-      if (style && (!selectedStyle || selectedStyle.name !== style.name)) {
-        setSelectedStyle(style);
-      }
-    } else if (selectedStyle && !queryParams.style) {
-      setSelectedStyle(null);
-    }
-    
-    // Update location
-    if (queryParams.location !== selectedLocation) {
-      setSelectedLocation(queryParams.location);
-    }
-    
-    // Update coordinates if in URL
-    if (queryParams.coords) {
-      try {
-        const coords = JSON.parse(queryParams.coords);
-        setLocationCoordinates(coords);
-      } catch (e) {
-        console.error("Failed to parse coordinates from URL", e);
-      }
-    }
-    
-    // Update radius if in URL
-    if (queryParams.radius) {
-      try {
-        const radius = parseFloat(queryParams.radius);
-        if (!isNaN(radius)) {
-          setLocationRadius(radius);
-        }
-      } catch (e) {
-        console.error("Failed to parse radius from URL", e);
-      }
-    }
-    
-    // Update tags
-    if (queryParams.tags.toString() !== selectedTags.toString()) {
-      setSelectedTags(queryParams.tags);
-    }
-    
-    // If URL has search params, set hasSearched to true
-    if (queryParams.q || queryParams.style || queryParams.location || queryParams.tags.length > 0) {
-      setHasSearched(true);
-    }
-  }, [queryParams]);
+  };
+
+  // Handle tag removal
+  const handleTagRemove = (tag) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
+  };
 
   return (
     <div className="relative w-full max-w-8xl mx-auto"> 
-
-      <div className={`relative w-full max-w-2xl mx-auto ${showStyleFilter ? 'mb-80' : 'mb-0'}`}>        {/* Main Search Options */}
+      <div className={`relative w-full max-w-2xl mx-auto ${showStyleFilter ? 'mb-80' : 'mb-0'}`}>
+        {/* Main Search Options */}
         <div className="flex flex-col space-y-4">
           {/* Text Search */}
           <div className="relative flex items-center">
@@ -275,12 +297,12 @@ const SearchSection = () => {
           </div>
 
           {/* Filter Buttons */}
-
           <div className="flex gap-4 justify-center">
             <button
               onClick={() => {
                 setShowStyleFilter(!showStyleFilter);
                 setShowLocationFilter(false);
+                setShowTagFilter(false);
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${selectedStyle
                 ? 'border-purple-500 text-purple-500'
@@ -295,6 +317,7 @@ const SearchSection = () => {
               onClick={() => {
                 setShowLocationFilter(!showLocationFilter);
                 setShowStyleFilter(false);
+                setShowTagFilter(false);
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${selectedLocation
                 ? 'border-purple-500 text-purple-500'
@@ -305,11 +328,11 @@ const SearchSection = () => {
               {selectedLocation || 'Location'}
             </button>
 
-
-
             <button
               onClick={() => {
                 setShowTagFilter(!showTagFilter);
+                setShowStyleFilter(false);
+                setShowLocationFilter(false);
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${selectedTags.length > 0
                 ? 'border-purple-500 text-purple-500'
@@ -321,8 +344,6 @@ const SearchSection = () => {
             </button>
 
             {(selectedStyle || selectedLocation || selectedImage || selectedTags.length > 0) && (
-
-
               <button
                 onClick={handleReset}
                 className="px-4 py-2 rounded-lg text-gray-300 hover:text-white"
@@ -333,18 +354,14 @@ const SearchSection = () => {
           </div>
 
           {/* Filter Dropdowns Container */}
-
           <div className="relative isolate">
             {/* Style Filter Dropdown */}
             {showStyleFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-10">
-                <div className=" px-4"> {/* Custom 1500px width */}
+                <div className="px-4">
                   <GenrePicker
                     genres={filteredGenres}
-                    onSelectGenre={(genre) => {
-                      setSelectedStyle(genre);
-                      setShowStyleFilter(false);
-                    }}
+                    onSelectGenre={handleStyleSelect}
                   />
                 </div>
               </div>
@@ -354,12 +371,7 @@ const SearchSection = () => {
             {showLocationFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-10">
                 <LocationSearch
-                  onLocationSelect={(locationData) => {
-                    setSelectedLocation(locationData.address);
-                    setLocationCoordinates(locationData.coordinates);
-                    setLocationRadius(locationData.radius);
-                    setShowLocationFilter(false);
-                  }}
+                  onLocationSelect={handleLocationSelect}
                   onClose={() => setShowLocationFilter(false)}
                 />
               </div>
@@ -386,11 +398,7 @@ const SearchSection = () => {
                       <button
                         key={tagItem}
                         className="w-full px-3 py-2 text-left text-gray-300 hover:bg-gray-700 hover:text-white"
-                        onClick={() => {
-                          if (!selectedTags.includes(tagItem)) {
-                            setSelectedTags(prev => [...prev, tagItem]);
-                          }
-                        }}
+                        onClick={() => handleTagSelect(tagItem)}
                       >
                         {tagItem}
                       </button>
@@ -418,9 +426,7 @@ const SearchSection = () => {
                 >
                   <span>{tag}</span>
                   <button
-                    onClick={() => {
-                      setSelectedTags(prev => prev.filter(t => t !== tag));
-                    }}
+                    onClick={() => handleTagRemove(tag)}
                     className="ml-1 text-purple-300 hover:text-purple-100"
                   >
                     <X className="w-3 h-3" />
