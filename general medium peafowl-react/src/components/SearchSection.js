@@ -57,6 +57,8 @@ const useQueryParams = () => {
       q: params.get('q') || '',
       style: params.get('style') || '',
       location: params.get('location') || '',
+      coords: params.get('coords') || '',
+      radius: params.get('radius') || '',
       tags: params.get('tags') ? params.get('tags').split(',') : []
     };
   }, [location.search]);
@@ -83,6 +85,14 @@ const SearchSection = () => {
   const [selectedLocation, setSelectedLocation] = React.useState(queryParams.location);
   const [selectedTags, setSelectedTags] = React.useState(queryParams.tags);
   
+  // Add new state variables for coordinates and radius
+  const [locationCoordinates, setLocationCoordinates] = React.useState(
+    queryParams.coords ? JSON.parse(queryParams.coords) : null
+  );
+  const [locationRadius, setLocationRadius] = React.useState(
+    queryParams.radius ? parseFloat(queryParams.radius) : 5
+  );
+
   const [filteredGenres, setFilteredGenres] = React.useState(genres);
   const [selectedImage, setSelectedImage] = React.useState(null);
   const fileInputRef = React.useRef(null);
@@ -102,7 +112,15 @@ const SearchSection = () => {
       
       if (searchTerm) params.append('q', searchTerm);
       if (selectedStyle) params.append('style', selectedStyle.name);
-      if (selectedLocation) params.append('location', selectedLocation);
+      if (selectedLocation) {
+        params.append('location', selectedLocation);
+        
+        // Add coordinates and radius as separate parameters
+        if (locationCoordinates && locationCoordinates.length === 2) {
+          params.append('coords', JSON.stringify(locationCoordinates));
+          params.append('radius', locationRadius.toString());
+        }
+      }
       if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
       
       // Navigate to the URL with search parameters
@@ -166,6 +184,8 @@ const SearchSection = () => {
     setSearchTerm('');
     setSelectedStyle(null);
     setSelectedLocation('');
+    setLocationCoordinates(null); // Reset coordinates
+    setLocationRadius(5); // Reset radius to default
     setFilteredGenres(genres);
     setSelectedImage(null);
     setSelectedTags([]);
@@ -195,6 +215,28 @@ const SearchSection = () => {
       setSelectedLocation(queryParams.location);
     }
     
+    // Update coordinates if in URL
+    if (queryParams.coords) {
+      try {
+        const coords = JSON.parse(queryParams.coords);
+        setLocationCoordinates(coords);
+      } catch (e) {
+        console.error("Failed to parse coordinates from URL", e);
+      }
+    }
+    
+    // Update radius if in URL
+    if (queryParams.radius) {
+      try {
+        const radius = parseFloat(queryParams.radius);
+        if (!isNaN(radius)) {
+          setLocationRadius(radius);
+        }
+      } catch (e) {
+        console.error("Failed to parse radius from URL", e);
+      }
+    }
+    
     // Update tags
     if (queryParams.tags.toString() !== selectedTags.toString()) {
       setSelectedTags(queryParams.tags);
@@ -218,10 +260,17 @@ const SearchSection = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search for tattoo artist by name..."
+                placeholder="Search for tattoo artist by name or style..."
                 className="w-full h-14 px-6 rounded-lg bg-gray-800 text-white border border-gray-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
               />
-
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-14 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -304,10 +353,11 @@ const SearchSection = () => {
             {/* Location Filter Dropdown */}
             {showLocationFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-10">
-
                 <LocationSearch
                   onLocationSelect={(locationData) => {
-                    setSelectedLocation(`${locationData.address} (${locationData.radius}km)`);
+                    setSelectedLocation(locationData.address);
+                    setLocationCoordinates(locationData.coordinates);
+                    setLocationRadius(locationData.radius);
                     setShowLocationFilter(false);
                   }}
                   onClose={() => setShowLocationFilter(false)}

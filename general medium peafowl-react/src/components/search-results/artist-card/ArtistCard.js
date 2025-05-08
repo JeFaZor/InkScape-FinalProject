@@ -13,14 +13,14 @@ const useReverseGeocode = (coordinates) => {
       // Check if the input is in coordinate format (e.g., "31.7683, 35.2137" or "(31.7683,35.2137)")
       const coordString = coordinates.replace(/[()]/g, ''); // Remove parentheses if present
       const coordRegex = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
-      
+
       if (!coordinates || !coordRegex.test(coordString)) {
         setAddress(coordinates); // Return as is if not in coordinate format
         return;
       }
-      
+
       const [lat, lng] = coordString.split(',').map(coord => parseFloat(coord.trim()));
-      
+
       try {
         setLoading(true);
         // Using OpenStreetMap's Nominatim API for reverse geocoding
@@ -34,21 +34,21 @@ const useReverseGeocode = (coordinates) => {
             }
           }
         );
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch address');
         }
-        
+
         const data = await response.json();
-        
+
         // Format the address based on available data
         if (data && data.address) {
           const { road, city, town, village, suburb, neighbourhood, state } = data.address;
-          
+
           // Try to get the most specific location (city first, then town, etc.)
           const locality = city || town || village || suburb || state || '';
           const street = road || neighbourhood || '';
-          
+
           if (locality && street) {
             setAddress(`${street}, ${locality}`);
           } else if (locality) {
@@ -83,78 +83,78 @@ const useReverseGeocode = (coordinates) => {
 // ImageModal Component for Lightbox functionality
 const ImageModal = ({ isOpen, onClose, images, currentIndex, setCurrentIndex }) => {
   const [scale, setScale] = useState(1);
-  
+
   if (!isOpen) return null;
-  
+
   const nextImage = () => {
     setCurrentIndex((currentIndex + 1) % images.length);
     setScale(1); // Reset zoom when changing image
   };
-  
+
   const prevImage = () => {
     setCurrentIndex((currentIndex - 1 + images.length) % images.length);
     setScale(1); // Reset zoom when changing image
   };
-  
+
   const zoomIn = () => {
     setScale(prev => Math.min(prev + 0.5, 3));
   };
-  
+
   const zoomOut = () => {
     setScale(prev => Math.max(prev - 0.5, 1));
   };
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
       {/* Close button */}
-      <button 
+      <button
         onClick={onClose}
         className="absolute top-4 right-4 text-white bg-gray-800 rounded-full p-2 hover:bg-gray-700"
       >
         <X size={24} />
       </button>
-      
+
       {/* Navigation buttons */}
-      <button 
+      <button
         onClick={prevImage}
         className="absolute left-4 text-white bg-gray-800 p-2 rounded-full hover:bg-gray-700"
       >
         &lt;
       </button>
-      <button 
+      <button
         onClick={nextImage}
         className="absolute right-4 text-white bg-gray-800 p-2 rounded-full hover:bg-gray-700"
       >
         &gt;
       </button>
-      
+
       {/* Image container */}
       <div className="relative max-w-4xl max-h-screen p-4">
-        <img 
-          src={images[currentIndex]} 
+        <img
+          src={images[currentIndex]}
           alt={`Tattoo work ${currentIndex + 1}`}
           className="max-h-[80vh] transition-transform duration-200 ease-in-out"
           style={{ transform: `scale(${scale})` }}
         />
-        
+
         {/* Zoom controls */}
         <div className="absolute bottom-4 right-4 flex gap-2">
-          <button 
-            onClick={zoomOut} 
+          <button
+            onClick={zoomOut}
             className="bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700 disabled:opacity-50"
             disabled={scale <= 1}
           >
             -
           </button>
-          <button 
-            onClick={zoomIn} 
+          <button
+            onClick={zoomIn}
             className="bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700 disabled:opacity-50"
             disabled={scale >= 3}
           >
             +
           </button>
         </div>
-        
+
         {/* Image counter */}
         <div className="absolute bottom-4 left-4 text-white bg-gray-800 px-2 py-1 rounded-md">
           {currentIndex + 1} / {images.length}
@@ -169,7 +169,7 @@ const ArtistCard = ({ artist = {} }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [hoveredImageIndex, setHoveredImageIndex] = useState(null);
-  
+
   // כולל כל השדות מטבלת artist_profiles
   const {
     id,
@@ -195,21 +195,21 @@ const ArtistCard = ({ artist = {} }) => {
 
   // משתמש בדירוג הממוצע מטבלת artist_profiles אם קיים
   const displayRating = avg_rating || rating;
-  
+
   // משתמש בתמונת פרופיל מהדאטאבייס אם קיימת, אחרת בברירת המחדל
   const displayProfileImage = profile_image_url || profileImage;
-  
+
   // משתמש במערך תמונות עבודות מהדאטאבייס אם קיים, אחרת בברירת המחדל
-  const displayRecentWorks = recent_works_urls.length > 0 
-    ? recent_works_urls 
+  const displayRecentWorks = recent_works_urls.length > 0
+    ? recent_works_urls
     : recentWorks;
-  
+
   // המרת קואורדינטות למיקום קריא
   const { address: formattedLocation, loading: addressLoading } = useReverseGeocode(location);
-  
+
   // השתמש במיקום מעובד או באזור שירות, תלוי במה שזמין
-  const displayLocation = addressLoading 
-    ? 'Loading location...' 
+  const displayLocation = addressLoading
+    ? 'Loading location...'
     : (formattedLocation || serviceArea || 'Location not specified');
 
   // פונקציה לפתיחת המודל עם תמונה ספציפית
@@ -224,13 +224,13 @@ const ArtistCard = ({ artist = {} }) => {
       <div className="flex items-center p-3 bg-gray-900 border-b border-gray-700">
         {/* Profile Image */}
         <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow mr-3 flex-shrink-0">
-          <img 
-            src={displayProfileImage} 
+          <img
+            src={displayProfileImage}
             alt={`${name}'s profile`}
             className="w-full h-full object-cover"
           />
         </div>
-        
+
         {/* Artist Name and Verification */}
         <div className="flex items-center justify-between w-full">
           <div className="flex-1 mr-1 min-w-0">
@@ -246,29 +246,27 @@ const ArtistCard = ({ artist = {} }) => {
           )}
         </div>
       </div>
-      
+
       {/* Tattoo Gallery - עם פונקציונליות hover וclick */}
       <div className="relative bg-gray-800" style={{ height: "160px" }}>
         <div className="grid grid-cols-3 gap-1 h-full">
           {displayRecentWorks.slice(0, 3).map((work, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="relative overflow-hidden cursor-pointer group"
               onClick={() => openImageModal(index)}
               onMouseEnter={() => setHoveredImageIndex(index)}
               onMouseLeave={() => setHoveredImageIndex(null)}
             >
-              <img 
+              <img
                 src={work}
-                alt={`Recent work ${index+1}`}
-                className={`w-full h-full object-cover transition-transform duration-200 ${
-                  hoveredImageIndex === index ? 'scale-110' : 'scale-100'
-                }`}
+                alt={`Recent work ${index + 1}`}
+                className={`w-full h-full object-cover transition-transform duration-200 ${hoveredImageIndex === index ? 'scale-110' : 'scale-100'
+                  }`}
               />
               {/* אייקון זום מופיע בhover */}
-              <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 transition-opacity duration-200 ${
-                hoveredImageIndex === index ? 'opacity-100' : 'opacity-0'
-              }`}>
+              <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 transition-opacity duration-200 ${hoveredImageIndex === index ? 'opacity-100' : 'opacity-0'
+                }`}>
                 <ZoomIn className="text-white" size={24} />
               </div>
             </div>
@@ -281,7 +279,10 @@ const ArtistCard = ({ artist = {} }) => {
         <div className="flex items-center">
           <div className="flex items-center gap-1 text-sm text-gray-400 flex-1 min-w-0">
             <MapPin className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{displayLocation}</span>
+            <span className="truncate">
+              {displayLocation}
+              {artist.distance && ` (${artist.distance}km away)`}
+            </span>
           </div>
           <div className="flex items-center gap-0.5 ml-1 flex-shrink-0">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -301,8 +302,8 @@ const ArtistCard = ({ artist = {} }) => {
         {styles.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {styles.map((style, index) => (
-              <span 
-                key={index} 
+              <span
+                key={index}
                 className="px-2.5 py-0.5 rounded-full text-xs bg-purple-900/50 text-purple-200 border border-purple-500/50"
               >
                 {style}
@@ -313,14 +314,14 @@ const ArtistCard = ({ artist = {} }) => {
       </div>
 
       <div className="px-4 pb-4 flex gap-2">
-        <button 
+        <button
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white transition-colors"
         >
           <MessageCircle className="w-4 h-4" />
           Contact
         </button>
         {instagramHandle && (
-          <button 
+          <button
             className="px-4 py-2 rounded-md border border-gray-700 hover:bg-gray-800 transition-colors"
             onClick={() => window.open(`${instagramHandle}`, '_blank')}
           >
@@ -330,7 +331,7 @@ const ArtistCard = ({ artist = {} }) => {
       </div>
 
       {/* מודל תמונה (לייטבוקס) */}
-      <ImageModal 
+      <ImageModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         images={displayRecentWorks}
