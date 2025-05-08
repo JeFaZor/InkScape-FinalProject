@@ -8,95 +8,149 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  const fetchUserData = async (userId) => {
+    try {
+      console.log('Fetching user data for ID:', userId);
+      
+      // שינוי: במקום .single(), נשתמש ב-.maybeSingle() שלא יזרוק שגיאה אם אין תוצאות
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();  // שינוי כאן
+        
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+        return null;
+      }
+      
+      if (!userData) {
+        console.log('No user data found for ID:', userId);
+        return null;
+      }
+      
+      console.log('User data fetched successfully:', userData);
+      return userData;
+    } catch (error) {
+      console.error('Exception fetching user data:', error);
+      return null;
+    }
+  };
+
+  // Unified method to handle user state updates
+  const updateUserState = async (session) => {
+    if (session) {
+      console.log('Setting user from session, ID:', session.user.id);
+      
+      // Fetch additional user data
+      const userData = await fetchUserData(session.user.id);
+      
+      if (userData) {
+        // Combine auth data with profile data
+        setUser({ ...session.user, ...userData });
+      } else {
+        // Fallback to just session user if we couldn't get profile data
+        setUser(session.user);
+      }
+    } else {
+      console.log('No session, clearing user state');
+      setUser(null);
+    }
+    
+    setLoading(false);
+    if (!initialized) setInitialized(true);
+  };
 
   useEffect(() => {
-    // Check for active session when the component mounts
-    const getSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+    const initializeAuth = async () => {
+      console.log('Initializing auth state...');
+      setLoading(true);
       
-      if (session) {
-        console.log('%c Session found:', 'color: #4CAF50; font-weight: bold', session);
-        // If we have a session, fetch user data from our users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (!userError) {
-          // Combine auth data with profile data
-          setUser({ ...session.user, ...userData });
-        } else {
-          console.error('%c Error fetching user data:', 'color: #FF5252; font-weight: bold', userError);
-          setUser(session.user);
-        }
-      } else {
-        setUser(null);
+      try {
+        // First, check for existing session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (error) {
-          console.error('%c Session error:', 'color: #FF5252; font-weight: bold', error);
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
         }
-      }
-      
-      setLoading(false);
-    };
-
-    getSession();
-
-    // Set up listener for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('%c Auth state changed:', 'color: #2196F3; font-weight: bold', event);
         
-        if (session) {
-          // When auth state changes with a valid session
-          console.log('%c New session established:', 'color: #4CAF50; font-weight: bold', session);
-          
-          // Fetch user data from our users table
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (!userError) {
-            // Combine auth data with profile data
-            setUser({ ...session.user, ...userData });
-          } else {
-            console.error('%c Error fetching user data:', 'color: #FF5252; font-weight: bold', userError);
-            setUser(session.user);
+        console.log('Initial session check:', session ? 'Session found' : 'No session');
+        
+        // Handle the current session state
+        await updateUserState(session);
+        
+        // Set up auth state change listener
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            console.log('Auth state changed:', event);
+            await updateUserState(newSession);
           }
-        } else {
-          setUser(null);
-        }
+        );
         
+        // Return cleanup function
+        return () => {
+          console.log('Cleaning up auth listener');
+          if (authListener && authListener.subscription) {
+            authListener.subscription.unsubscribe();
+          }
+        };
+      } catch (error) {
+        console.error('Error in auth initialization:', error);
         setLoading(false);
       }
-    );
-
-    // Cleanup subscription on unmount
-    return () => {
-      authListener.subscription.unsubscribe();
     };
+    
+    initializeAuth();
   }, []);
 
   // Sign out function
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('%c Error signing out:', 'color: #FF5252; font-weight: bold', error);
-    } else {
+    try {
+      console.log('Signing out user');
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
       setUser(null);
+      console.log('Sign out successful');
       window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Auth context value
+  // Enhanced context value with debugging info
   const value = {
     user,
     loading,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    initialized,
+    authStatus: {
+      hasUser: !!user,
+      isLoading: loading,
+      isInitialized: initialized
+    }
   };
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('Auth context state updated:', {
+      hasUser: !!user,
+      userId: user?.id,
+      isLoading: loading,
+      isInitialized: initialized
+    });
+  }, [user, loading, initialized]);
 
   return (
     <AuthContext.Provider value={value}>

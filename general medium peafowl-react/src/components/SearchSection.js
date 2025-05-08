@@ -1,5 +1,5 @@
 import React from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom'; // Added useLocation
 import { Search, Image, MapPin, Filter, Tag, X, Loader2 } from 'lucide-react';
 import GenrePicker from './get-started/GenrePicker';
 import LocationSearch from './LocationSearch/LocationSearch';
@@ -48,43 +48,66 @@ const tags = [
   'Watercolor'
 ];
 
-
+// Custom hook to parse URL parameters
+const useQueryParams = () => {
+  const location = useLocation();
+  return React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      q: params.get('q') || '',
+      style: params.get('style') || '',
+      location: params.get('location') || '',
+      tags: params.get('tags') ? params.get('tags').split(',') : []
+    };
+  }, [location.search]);
+};
 
 const SearchSection = () => {
   const { user } = useAuth();
+  const history = useHistory();
+  const queryParams = useQueryParams(); // Get params from URL
+  
+  // Initialize state from URL parameters
   const [tagSearchTerm, setTagSearchTerm] = React.useState('');
+  const [showStyleFilter, setShowStyleFilter] = React.useState(false);
+  const [showLocationFilter, setShowLocationFilter] = React.useState(false);
+  const [showTagFilter, setShowTagFilter] = React.useState(false);
+  const [hasSearched, setHasSearched] = React.useState(false);
+  const [isSearching, setIsSearching] = React.useState(false);
+  
+  // Initialize search terms from URL parameters
+  const [searchTerm, setSearchTerm] = React.useState(queryParams.q);
+  const [selectedStyle, setSelectedStyle] = React.useState(
+    queryParams.style ? genres.find(g => g.name === queryParams.style) || null : null
+  );
+  const [selectedLocation, setSelectedLocation] = React.useState(queryParams.location);
+  const [selectedTags, setSelectedTags] = React.useState(queryParams.tags);
+  
+  const [filteredGenres, setFilteredGenres] = React.useState(genres);
+  const [selectedImage, setSelectedImage] = React.useState(null);
+  const fileInputRef = React.useRef(null);
+
+  // Filter tags based on search term
   const filteredTags = React.useMemo(() => {
     return tags.filter(tag =>
       tag.toLowerCase().includes(tagSearchTerm.toLowerCase())
     );
   }, [tagSearchTerm]);
-  const history = useHistory();
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [showStyleFilter, setShowStyleFilter] = React.useState(false);
-  const [showLocationFilter, setShowLocationFilter] = React.useState(false);
-  const [selectedStyle, setSelectedStyle] = React.useState(null);
-  const [selectedLocation, setSelectedLocation] = React.useState('');
-  const [filteredGenres, setFilteredGenres] = React.useState(genres);
-  const [selectedImage, setSelectedImage] = React.useState(null);
-  const fileInputRef = React.useRef(null);
-  const [showTagFilter, setShowTagFilter] = React.useState(false);
-  const [selectedTags, setSelectedTags] = React.useState([]);
-  const [hasSearched, setHasSearched] = React.useState(false);
-  const [isSearching, setIsSearching] = React.useState(false);
-  
 
-  // Modified handleSearch
+  // Update URL params and trigger search
   const handleSearch = async () => {
     try {
       setIsSearching(true);
       const params = new URLSearchParams();
+      
       if (searchTerm) params.append('q', searchTerm);
       if (selectedStyle) params.append('style', selectedStyle.name);
       if (selectedLocation) params.append('location', selectedLocation);
       if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
       
-      // Update URL without navigation
-      window.history.pushState({}, '', `?${params.toString()}`);
+      // Navigate to the URL with search parameters
+      // This is the key change - using history.push instead of window.history.pushState
+      history.push(`?${params.toString()}`);
       
       // Show search results
       setHasSearched(true);
@@ -100,7 +123,7 @@ const SearchSection = () => {
     if (file) {
       setSelectedImage(URL.createObjectURL(file));
       
-      // העברת הקובץ לשרת לניתוח
+      // Upload file to server for analysis
       const formData = new FormData();
       formData.append('image', file);
       
@@ -116,7 +139,7 @@ const SearchSection = () => {
         
         const result = await response.json();
         
-        // מצא את האובייקט של סגנון הקעקוע המתאים
+        // Find matching genre
         const matchedGenre = genres.find(genre => genre.name === result.style);
         
         if (matchedGenre) {
@@ -124,14 +147,13 @@ const SearchSection = () => {
           setShowStyleFilter(false);
         }
         
-        // הוסף את התגיות שזוהו
+        // Add detected tags
         if (result.tags && result.tags.length > 0) {
           setSelectedTags(result.tags);
         }
         
-        // הצג הודעה למשתמש
+        // Show message to user
         alert(`Style detected: ${result.style}\nTags: ${result.tags.join(', ')}`);
-        
         
       } catch (error) {
         console.error('Error analyzing image:', error);
@@ -147,7 +169,42 @@ const SearchSection = () => {
     setFilteredGenres(genres);
     setSelectedImage(null);
     setSelectedTags([]);
+    
+    // Clear URL parameters on reset
+    history.push('/');
   };
+
+  // Update state when URL params change
+  React.useEffect(() => {
+    if (queryParams.q !== searchTerm) {
+      setSearchTerm(queryParams.q);
+    }
+    
+    // Update selected style based on URL
+    if (queryParams.style) {
+      const style = genres.find(g => g.name === queryParams.style);
+      if (style && (!selectedStyle || selectedStyle.name !== style.name)) {
+        setSelectedStyle(style);
+      }
+    } else if (selectedStyle && !queryParams.style) {
+      setSelectedStyle(null);
+    }
+    
+    // Update location
+    if (queryParams.location !== selectedLocation) {
+      setSelectedLocation(queryParams.location);
+    }
+    
+    // Update tags
+    if (queryParams.tags.toString() !== selectedTags.toString()) {
+      setSelectedTags(queryParams.tags);
+    }
+    
+    // If URL has search params, set hasSearched to true
+    if (queryParams.q || queryParams.style || queryParams.location || queryParams.tags.length > 0) {
+      setHasSearched(true);
+    }
+  }, [queryParams]);
 
   return (
     <div className="relative w-full max-w-8xl mx-auto"> 
@@ -262,7 +319,7 @@ const SearchSection = () => {
             {showTagFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-4 w-100">
                 <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
-                  {/* שדה חיפוש תגיות */}
+                  {/* Search field for tags */}
                   <div className="p-2 border-b border-gray-700">
                     <input
                       type="text"
@@ -273,7 +330,7 @@ const SearchSection = () => {
                     />
                   </div>
 
-                  {/* רשימת התגיות המסוננת */}
+                  {/* Filtered tags list */}
                   <div className="max-h-60 overflow-y-auto">
                     {filteredTags.map((tagItem) => (
                       <button
@@ -289,7 +346,7 @@ const SearchSection = () => {
                       </button>
                     ))}
 
-                    {/* הודעה אם אין תוצאות */}
+                    {/* Message if no results */}
                     {filteredTags.length === 0 && (
                       <div className="px-3 py-2 text-gray-500 text-sm">
                         No matching tags found
@@ -392,16 +449,10 @@ const SearchSection = () => {
             )}
           </div>
         </div>
-
-
-
-
       </div>
       <div className="w-full" style={{ width: '100%', maxWidth: '100%' }}>
-
-  {hasSearched && <SearchResults />}
-</div>
-    
+        {hasSearched && <SearchResults />}
+      </div>
     </div>
   );
 };

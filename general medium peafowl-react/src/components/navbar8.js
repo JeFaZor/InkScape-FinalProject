@@ -10,6 +10,7 @@ import { useAuth } from './context/AuthContext';
 
 const Navbar8 = (props) => {
   const history = useHistory();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const [link5DropdownVisible, setLink5DropdownVisible] = useState(false)
   const { user, isAuthenticated, signOut } = useAuth();
@@ -88,28 +89,39 @@ const Navbar8 = (props) => {
       <div className="text-white bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center">
         {user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
       </div>
-      <div className="relative group">
-        <button className="text-gray-300 hover:text-white flex items-center space-x-1">
-          <span>{user?.first_name || user?.email?.split('@')[0] || 'User'}</span>
-          <svg viewBox="0 0 1024 1024" className="w-4 h-4">
-            <path d="M298 426h428l-214 214z"></path>
-          </svg>
-        </button>
-        <div className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-sm rounded-md shadow-lg border border-purple-600/20 py-1 hidden group-hover:block z-50">
-          <button 
-            onClick={() => history.push('/dashboard')}
-            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
-          >
-            Dashboard
-          </button>
-          <button 
-            onClick={signOut}
-            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
+      <div className="relative">
+  <button 
+    className="text-gray-300 hover:text-white flex items-center space-x-1"
+    onClick={() => setUserMenuOpen(!userMenuOpen)}
+  >
+    <span>{user?.first_name || user?.email?.split('@')[0] || 'User'}</span>
+    <svg viewBox="0 0 1024 1024" className="w-4 h-4">
+      <path d="M298 426h428l-214 214z"></path>
+    </svg>
+  </button>
+  {userMenuOpen && (
+    <div className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-sm rounded-md shadow-lg border border-purple-600/20 py-1 z-50">
+      <button 
+        onClick={() => {
+          history.push('/dashboard');
+          setUserMenuOpen(false);
+        }}
+        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
+      >
+        Dashboard
+      </button>
+      <button 
+        onClick={() => {
+          signOut();
+          setUserMenuOpen(false);
+        }}
+        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
+      >
+        Sign Out
+      </button>
+    </div>
+  )}
+</div>
     </div>
   ) : (
     <>

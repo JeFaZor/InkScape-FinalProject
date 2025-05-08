@@ -51,7 +51,18 @@ const styleNameToIdMap = {
 const SearchResults = () => {
   // Get search parameters from URL
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();  // הוסף את loading כאן
+
+  // הוסף כאן את הלוגים החדשים
+  console.log('SearchResults component - Auth check:', {
+    userExists: !!user,
+    authModule: useAuth(),
+    userDetails: user ? {
+      id: user.id,
+      email: user.email,
+      role: user.role
+    } : 'No user data'
+  });
 
   // States
   const [artists, setArtists] = useState([]);
@@ -69,18 +80,27 @@ const SearchResults = () => {
 
   // Function to fetch artists from Supabase
   const fetchArtists = async () => {
+
     console.log('1. Starting fetchArtists');
-    
+    console.log('User state:', user ? 'Logged in' : 'Not logged in');
+    if (user) {
+      console.log('User details:', {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      });
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-  
+
       // Apply pagination
       console.log('2. Setting up pagination parameters');
       const pageSize = 10;
       const startRange = (page - 1) * pageSize;
       const endRange = startRange + pageSize - 1;
-  
+
       // Base query for artist profiles
       console.log('3. Creating base query');
       let query = supabase
@@ -97,9 +117,9 @@ const SearchResults = () => {
           profile_image_url,
           recent_works_urls
         `, { count: 'exact' });
-  
+
       console.log('4. Base query created');
-  
+
       // Filter by style if provided
       if (styleName && styleName.trim() !== '') {
         console.log('5. Applying style filter:', styleName);
@@ -107,23 +127,23 @@ const SearchResults = () => {
           // Get style ID - try both as-is and lowercase for better matching
           const styleNameInput = styleName.trim();
           // Look up style ID in our map with more flexible matching
-          let styleId = styleNameToIdMap[styleNameInput] || 
-                       styleNameToIdMap[styleNameInput.toLowerCase()] || 
-                       styleNameToIdMap[styleNameInput.charAt(0).toUpperCase() + styleNameInput.slice(1).toLowerCase()];
-          
+          let styleId = styleNameToIdMap[styleNameInput] ||
+            styleNameToIdMap[styleNameInput.toLowerCase()] ||
+            styleNameToIdMap[styleNameInput.charAt(0).toUpperCase() + styleNameInput.slice(1).toLowerCase()];
+
           // If no direct match, try partial matching
           if (!styleId) {
             for (const [key, id] of Object.entries(styleNameToIdMap)) {
-              if (key.includes(styleNameInput.toLowerCase()) || 
-                  styleNameInput.toLowerCase().includes(key.toLowerCase())) {
+              if (key.includes(styleNameInput.toLowerCase()) ||
+                styleNameInput.toLowerCase().includes(key.toLowerCase())) {
                 styleId = id;
                 break;
               }
             }
           }
-  
+
           console.log('6. Style ID found:', styleId);
-  
+
           if (!styleId) {
             // If no style ID found, return empty results
             console.log('7. No style ID found, returning empty results');
@@ -133,21 +153,21 @@ const SearchResults = () => {
             setIsLoading(false);
             return;
           }
-  
+
           // Find artists linked to this style
           console.log('8. Finding artists with style ID:', styleId);
           const { data: artistsWithStyle, error: artistsError } = await supabase
             .from('styles_artists')
             .select('artist_id')
             .eq('style_id', styleId);
-  
+
           if (artistsError) {
             console.log('9. Error finding artists with style:', artistsError.message);
             throw artistsError;
           }
-  
+
           console.log('10. Found artists with style:', artistsWithStyle?.length || 0);
-  
+
           if (!artistsWithStyle || artistsWithStyle.length === 0) {
             // No artists with this style, return empty results
             console.log('11. No artists with this style, returning empty results');
@@ -157,10 +177,10 @@ const SearchResults = () => {
             setIsLoading(false);
             return;
           }
-  
+
           // Extract the artist IDs
           const artistIds = artistsWithStyle.map(a => a.artist_id);
-          
+
           // Add IDs to the main query
           query = query.in('id', artistIds);
           console.log('12. Added artist IDs to query');
@@ -169,27 +189,44 @@ const SearchResults = () => {
           throw styleFilterError;
         }
       }
-  
+
       // Filter by location if provided
       if (location && location.trim() !== '') {
         console.log('14. Applying location filter:', location);
         query = query.ilike('location', `%${location.trim()}%`);
       }
-  
+
       // Filter by free text search if provided
       if (searchQuery && searchQuery.trim() !== '') {
         console.log('15. Applying text search filter:', searchQuery);
         query = query.ilike('bio', `%${searchQuery.trim()}%`);
       }
-  
+
       // Apply pagination
       console.log('16. Applying pagination range:', { startRange, endRange });
       query = query.range(startRange, endRange);
-  
+
+      // Log the final query configuration before execution
+      console.log('17. Final query configuration:', {
+        filters: {
+          hasStyleFilter: !!styleName,
+          hasLocationFilter: !!location,
+          hasSearchQuery: !!searchQuery,
+          tagsCount: tags.length
+        },
+        pagination: { startRange, endRange },
+        user: user ? { id: user.id, role: user.role } : 'not logged in'
+      });
+
+      // הוסף כאן את השורה החדשה
+      console.log('Query object state:', {
+        queryInstance: query,
+        supabaseClientState: supabase
+      });
       // Execute the query with timeout
       console.log('17. Executing final query');
       const queryPromise = query;
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Query timeout')), 10000)
       );
 
@@ -197,19 +234,27 @@ const SearchResults = () => {
         queryPromise,
         timeoutPromise
       ]);
-  
-      console.log('18. Query executed:', { 
-        success: !!artistsData, 
+
+      console.log('18. Query executed:', {
+        success: !!artistsData,
         count: artistsData?.length || 0,
         totalCount: count || 0,
-        error: artistError ? artistError.message : null 
+        error: artistError ? {
+          message: artistError.message,
+          code: artistError.code,
+          details: artistError.details
+        } : null,
+        firstArtist: artistsData && artistsData.length > 0 ? {
+          id: artistsData[0].id,
+          user_id: artistsData[0].user_id
+        } : null
       });
-  
+
       if (artistError) {
         console.error('19. Query error:', artistError);
         throw artistError;
       }
-  
+
       // If no artists found, return empty results
       if (!artistsData || artistsData.length === 0) {
         console.log('20. No artists found, returning empty results');
@@ -219,17 +264,17 @@ const SearchResults = () => {
         setIsLoading(false);
         return;
       }
-  
+
       // Update total results count on first page
       console.log('21. Updating total results count:', count);
       if (page === 1) {
         setTotalResults(count || 0);
       }
-  
+
       // Extract artist IDs for additional queries
       const artistIds = artistsData.map(artist => artist.id);
       console.log('22. Extracted artist IDs for additional queries:', artistIds.length);
-  
+
       // Get user data for these artists
       console.log('23. Getting user data for artists');
       const { data: userData, error: userError } = await supabase
@@ -252,13 +297,13 @@ const SearchResults = () => {
           styles(id, name)
         `)
         .in('artist_id', artistIds);
-  
+
       if (stylesError) {
         console.error('27. Error fetching styles:', stylesError);
       } else {
         console.log('28. Styles fetched successfully:', artistStyles?.length || 0);
       }
-  
+
       // Get review counts for these artists - using a manual count approach
       console.log('29. Getting review counts');
       let reviewCounts = [];
@@ -267,7 +312,7 @@ const SearchResults = () => {
           .from('reviews')
           .select('artist_id')
           .in('artist_id', artistIds);
-  
+
         if (reviewsError) {
           console.error('30. Error fetching reviews:', reviewsError);
         } else if (reviewsData) {
@@ -277,7 +322,7 @@ const SearchResults = () => {
           reviewsData.forEach(review => {
             countMap[review.artist_id] = (countMap[review.artist_id] || 0) + 1;
           });
-  
+
           // Convert to required structure
           reviewCounts = Object.entries(countMap).map(([artist_id, count]) => ({
             artist_id,
@@ -288,13 +333,20 @@ const SearchResults = () => {
       } catch (error) {
         console.error('33. Error processing review counts:', error);
       }
-  
+
       // Process the results to format them for the frontend
       console.log('34. Processing results for frontend');
+      console.log('34. Processing results, input data counts:', {
+        artistsData: artistsData?.length || 0,
+        userData: userData?.length || 0,
+        artistStyles: artistStyles?.length || 0,
+        reviewCounts: reviewCounts?.length || 0
+      });
+
       const formattedArtists = artistsData.map(artist => {
         // Get user data for this artist
         const user = userData?.find(u => u.id === artist.user_id);
-        
+
         // Get styles for this artist
         const styles = artistStyles
           ? artistStyles
@@ -302,12 +354,12 @@ const SearchResults = () => {
             .map(s => s.styles?.name)
             .filter(Boolean)
           : [];
-  
+
         // Get review count for this artist
         const reviewData = reviewCounts
           ? reviewCounts.find(r => r.artist_id === artist.id)
           : null;
-  
+
         return {
           id: artist.id,
           name: user ? `${user.first_name} ${user.last_name}` : 'Unknown Artist',
@@ -323,9 +375,9 @@ const SearchResults = () => {
           email: user?.email || ''
         };
       });
-  
+
       console.log('35. Artists formatted for frontend:', formattedArtists.length);
-  
+
       // Update state
       console.log('36. Updating state');
       setArtists(prev => page === 1 ? formattedArtists : [...prev, ...formattedArtists]);
@@ -350,6 +402,8 @@ const SearchResults = () => {
 
   // Reset and reload when search parameters change
   useEffect(() => {
+    console.log('Search params changed, resetting and fetching artists');
+    console.log('Current search params:', { searchQuery, styleName, location, tags: tags.join(',') });
     setArtists([]);
     setPage(1);
     setHasMore(true);
