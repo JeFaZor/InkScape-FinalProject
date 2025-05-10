@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react'
 import { Helmet } from 'react-helmet'
-
+import Navbar8 from '../components/navbar8'
 import Hero17 from '../components/hero17'
 import Footer4 from '../components/footer4'
 import './home.css'
@@ -12,6 +12,7 @@ const Home = (props) => {
         <title>General Medium Peafowl</title>
         <meta property="og:title" content="General Medium Peafowl" />
       </Helmet>
+    
       <Hero17
         action1={
           <Fragment>

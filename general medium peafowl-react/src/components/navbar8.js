@@ -1,5 +1,6 @@
 import React, { useState, Fragment } from 'react'
 import { useHistory } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 
 
@@ -25,7 +26,7 @@ const Navbar8 = (props) => {
         />
         <div data-thq="thq-navbar-nav" className="navbar8-desktop-menu">
           <nav className="navbar8-links1">
-            <a href={null}>
+            <Link to="/">
               {props.link1 ?? (
                 <Fragment>
                   <span className="navbar8-text26 thq-link thq-body-small">
@@ -33,7 +34,7 @@ const Navbar8 = (props) => {
                   </span>
                 </Fragment>
               )}
-            </a>
+            </Link>
             <a href={null}>
               {props.link2 ?? (
                 <Fragment>
@@ -93,7 +94,7 @@ const Navbar8 = (props) => {
                       <img
                         src={user.profile_image_url}
                         alt="Profile"
-                        className="w-full h-full object-cover transform scale-125" 
+                        className="w-full h-full object-cover transform scale-125"
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.parentNode.classList.add('bg-purple-600', 'flex', 'justify-center', 'items-center');
@@ -209,7 +210,7 @@ const Navbar8 = (props) => {
               </div>
             </div>
             <nav className="navbar8-links2">
-              <a href={props.link1Url}>
+              <Link to="/">
                 {props.link1 ?? (
                   <Fragment>
                     <span className="navbar8-text26 thq-link thq-body-small">
@@ -217,7 +218,7 @@ const Navbar8 = (props) => {
                     </span>
                   </Fragment>
                 )}
-              </a>
+              </Link>
               <a href={props.link2Url}>
                 {props.link2 ?? (
                   <Fragment>

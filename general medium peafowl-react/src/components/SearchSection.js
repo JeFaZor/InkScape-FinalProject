@@ -5,6 +5,7 @@ import GenrePicker from './get-started/GenrePicker';
 import LocationSearch from './LocationSearch/LocationSearch';
 import SearchResults from './search-results/SearchResults';
 import { useAuth } from './context/AuthContext';
+import ImageProcessingAnimation from './ImageProcessingAnimation';
 
 // Import tattoo style images
 import traditional from './assets/tat1.jpg';
@@ -48,10 +49,11 @@ const tags = [
 ];
 
 const SearchSection = () => {
+  const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
   const history = useHistory();
   const location = useLocation();
-  
+
   // State initialization
   const [tagSearchTerm, setTagSearchTerm] = useState('');
   const [showStyleFilter, setShowStyleFilter] = useState(false);
@@ -61,7 +63,7 @@ const SearchSection = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [filteredGenres, setFilteredGenres] = useState(genres);
   const [selectedImage, setSelectedImage] = useState(null);
-  
+
   // Initialize all search states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(null);
@@ -69,13 +71,13 @@ const SearchSection = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [locationCoordinates, setLocationCoordinates] = useState(null);
   const [locationRadius, setLocationRadius] = useState(5);
-  
+
   const fileInputRef = React.useRef(null);
 
   // Parse URL parameters on component mount and when URL changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    
+
     // Get search parameters from URL
     const queryTerm = params.get('q') || '';
     const styleParam = params.get('style') || '';
@@ -83,11 +85,11 @@ const SearchSection = () => {
     const tagsParam = params.get('tags') ? params.get('tags').split(',') : [];
     const coordsParam = params.get('coords') || '';
     const radiusParam = params.get('radius') || '5';
-    
+
     // Update state only if the URL parameters are different from current state
     // This prevents infinite loops or unnecessary updates
     if (queryTerm !== searchTerm) setSearchTerm(queryTerm);
-    
+
     // Handle style parameter
     if (styleParam) {
       const matchedStyle = genres.find(g => g.name === styleParam);
@@ -97,19 +99,19 @@ const SearchSection = () => {
     } else if (selectedStyle) {
       setSelectedStyle(null);
     }
-    
+
     // Handle location parameter
     if (locationParam !== selectedLocation) {
       setSelectedLocation(locationParam);
     }
-    
+
     // Handle coordinates parameter
     if (coordsParam) {
       try {
         const coords = JSON.parse(coordsParam);
-        if (!locationCoordinates || 
-            coords[0] !== locationCoordinates[0] || 
-            coords[1] !== locationCoordinates[1]) {
+        if (!locationCoordinates ||
+          coords[0] !== locationCoordinates[0] ||
+          coords[1] !== locationCoordinates[1]) {
           setLocationCoordinates(coords);
         }
       } catch (e) {
@@ -118,7 +120,7 @@ const SearchSection = () => {
     } else if (locationCoordinates) {
       setLocationCoordinates(null);
     }
-    
+
     // Handle radius parameter
     if (radiusParam) {
       const radius = parseFloat(radiusParam);
@@ -126,12 +128,12 @@ const SearchSection = () => {
         setLocationRadius(radius);
       }
     }
-    
+
     // Handle tags parameter
     if (JSON.stringify(tagsParam) !== JSON.stringify(selectedTags)) {
       setSelectedTags(tagsParam);
     }
-    
+
     // If there are any search parameters, consider it a search
     if (queryTerm || styleParam || locationParam || tagsParam.length > 0) {
       setHasSearched(true);
@@ -149,18 +151,18 @@ const SearchSection = () => {
   const handleSearch = () => {
     // Prevent search if already searching
     if (isSearching) return;
-    
+
     setIsSearching(true);
-    
+
     // Create search parameters object
     const params = new URLSearchParams();
-    
+
     // Add parameters if they exist
     if (searchTerm) params.set('q', searchTerm);
     if (selectedStyle) params.set('style', selectedStyle.name);
     if (selectedLocation) {
       params.set('location', selectedLocation);
-      
+
       // Add coordinates and radius
       if (locationCoordinates && locationCoordinates.length === 2) {
         params.set('coords', JSON.stringify(locationCoordinates));
@@ -168,12 +170,12 @@ const SearchSection = () => {
       }
     }
     if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
-    
+
     // Update URL with new search parameters - this will trigger the useEffect above
     const searchString = params.toString();
     const newUrl = searchString ? `?${searchString}` : '/';
     history.push(newUrl);
-    
+
     // Always set hasSearched to true after search
     setHasSearched(true);
     setIsSearching(false);
@@ -184,42 +186,57 @@ const SearchSection = () => {
     const file = event.target.files[0];
     if (file) {
       setSelectedImage(URL.createObjectURL(file));
-      
-      // Upload file to server for analysis
-      const formData = new FormData();
-      formData.append('image', file);
-      
+
+
+      setIsProcessing(true);
+
       try {
+        const formData = new FormData();
+        formData.append('image', file);
+
+
         const response = await fetch('http://localhost:5000/api/analyze-tattoo', {
           method: 'POST',
           body: formData,
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to analyze image');
         }
-        
+
         const result = await response.json();
-        
-        // Find matching genre
-        const matchedStyle = genres.find(genre => genre.name === result.style);
-        
-        if (matchedStyle) {
-          setSelectedStyle(matchedStyle);
-          setShowStyleFilter(false);
+
+        const processingStartTime = Date.now();
+        const minimumProcessingTime = 3000;
+
+        const remainingTime = minimumProcessingTime - (Date.now() - processingStartTime);
+        if (remainingTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, remainingTime));
         }
-        
-        // Add detected tags
-        if (result.tags && result.tags.length > 0) {
-          setSelectedTags(result.tags);
+
+
+        if (result.style) {
+          const matchedStyle = genres.find(genre => genre.name === result.style);
+
+          if (matchedStyle) {
+            setSelectedStyle(matchedStyle);
+            setShowStyleFilter(false);
+          }
+
+
+          if (result.tags && result.tags.length > 0) {
+            setSelectedTags(result.tags);
+          }
+
+
+          alert(`Style detected: ${result.style}\nTags: ${result.tags.join(', ')}`);
         }
-        
-        // Show message to user
-        alert(`Style detected: ${result.style}\nTags: ${result.tags.join(', ')}`);
-        
       } catch (error) {
         console.error('Error analyzing image:', error);
         alert('Failed to analyze the image. Please try again.');
+      } finally {
+
+        setIsProcessing(false);
       }
     }
   };
@@ -234,10 +251,10 @@ const SearchSection = () => {
     setLocationRadius(5);
     setSelectedTags([]);
     setSelectedImage(null);
-    
+
     // Reset URL to home page
     history.push('/');
-    
+
     // Close any open filters
     setShowStyleFilter(false);
     setShowLocationFilter(false);
@@ -271,7 +288,7 @@ const SearchSection = () => {
   };
 
   return (
-    <div className="relative w-full max-w-8xl mx-auto"> 
+    <div className="relative w-full max-w-8xl mx-auto">
       <div className={`relative w-full max-w-2xl mx-auto ${showStyleFilter ? 'mb-80' : 'mb-0'}`}>
         {/* Main Search Options */}
         <div className="flex flex-col space-y-4">
@@ -439,11 +456,10 @@ const SearchSection = () => {
           <button
             onClick={handleSearch}
             disabled={isSearching}
-            className={`flex items-center justify-center gap-2 w-fit mx-auto py-3 px-7 rounded-lg ${
-              isSearching 
-                ? 'bg-gray-600 cursor-not-allowed' 
+            className={`flex items-center justify-center gap-2 w-fit mx-auto py-3 px-7 rounded-lg ${isSearching
+                ? 'bg-gray-600 cursor-not-allowed'
                 : 'bg-purple-600/80 hover:bg-purple-600'
-            } text-white transition-all`}
+              } text-white transition-all`}
           >
             {isSearching ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -509,6 +525,15 @@ const SearchSection = () => {
       <div className="w-full" style={{ width: '100%', maxWidth: '100%' }}>
         {hasSearched && <SearchResults />}
       </div>
+
+      {/* הוסף את האנימציה כאן */}
+      {isProcessing && (
+        <ImageProcessingAnimation
+          isVisible={true}
+          processingTime={5}
+        />
+      )}
+
     </div>
   );
 };
