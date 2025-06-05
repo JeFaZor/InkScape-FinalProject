@@ -1,9 +1,7 @@
 import React, { useState, Fragment } from 'react'
 import { useHistory } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-
-
-
+import { useTranslation } from 'react-i18next'; // הוספה חדשה
 import PropTypes from 'prop-types'
 
 import './navbar8.css'
@@ -11,11 +9,23 @@ import { useAuth } from './context/AuthContext';
 
 const Navbar8 = (props) => {
   const history = useHistory();
+  const { t, i18n } = useTranslation(); // הוספה חדשה
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false); // הוספה חדשה
 
   const [link5DropdownVisible, setLink5DropdownVisible] = useState(false)
   const { user, isAuthenticated, signOut } = useAuth();
   const [link5AccordionOpen, setLink5AccordionOpen] = useState(false)
+
+  // פונקציה לשינוי שפה - הוספה חדשה
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    setLanguageMenuOpen(false);
+  };
+
+  // קבלת השפה הנוכחית - הוספה חדשה
+  const currentLanguage = i18n.language || 'en';
+
   return (
     <header className="navbar8-container1">
       <header data-thq="thq-navbar" className="navbar8-navbar-interactive">
@@ -27,44 +37,36 @@ const Navbar8 = (props) => {
         <div data-thq="thq-navbar-nav" className="navbar8-desktop-menu">
           <nav className="navbar8-links1">
             <Link to="/">
-              {props.link1 ?? (
-                <Fragment>
-                  <span className="navbar8-text26 thq-link thq-body-small">
-                    Home
-                  </span>
-                </Fragment>
-              )}
+              <Fragment>
+                <span className="navbar8-text26 thq-link thq-body-small">
+                  {t('navbar.home')}
+                </span>
+              </Fragment>
             </Link>
             <a href={null}>
-              {props.link2 ?? (
-                <Fragment>
-                  <span className="navbar8-text15 thq-link thq-body-small">
-                    about
-                  </span>
-                </Fragment>
-              )}
+              <Fragment>
+                <span className="navbar8-text15 thq-link thq-body-small">
+                  {t('navbar.about')}
+                </span>
+              </Fragment>
             </a>
             <a href={null} target="_blank" rel="noreferrer noopener">
-              {props.link3 ?? (
-                <Fragment>
-                  <span className="navbar8-text22 thq-link thq-body-small">
-                    contact
-                  </span>
-                </Fragment>
-              )}
+              <Fragment>
+                <span className="navbar8-text22 thq-link thq-body-small">
+                  {t('navbar.contact')}
+                </span>
+              </Fragment>
             </a>
             <div
               onClick={() => setLink5DropdownVisible(!link5DropdownVisible)}
               className="navbar8-link4-dropdown-trigger"
             >
               <span>
-                {props.link4 ?? (
-                  <Fragment>
-                    <span className="navbar8-text14 thq-link thq-body-small">
-                      search
-                    </span>
-                  </Fragment>
-                )}
+                <Fragment>
+                  <span className="navbar8-text14 thq-link thq-body-small">
+                    {t('navbar.search')}
+                  </span>
+                </Fragment>
               </span>
               <div className="navbar8-icon-container1">
                 {link5DropdownVisible && (
@@ -85,11 +87,49 @@ const Navbar8 = (props) => {
             </div>
           </nav>
           <div className="navbar8-buttons1">
+            {/* Language Switcher - הוספה חדשה */}
+            <div className="relative" style={{ marginRight: '16px' }}>
+              <button
+                onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 01-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">
+                  {currentLanguage === 'he' ? 'עב' : 'EN'}
+                </span>
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+
+              {languageMenuOpen && (
+                <div className="absolute right-0 mt-2 w-32 bg-gray-900/95 backdrop-blur-sm rounded-md shadow-lg border border-purple-600/20 py-1 z-50">
+                  <button
+                    onClick={() => changeLanguage('en')}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-purple-600/20 hover:text-white transition-colors flex items-center space-x-2 ${currentLanguage === 'en' ? 'text-purple-400' : 'text-gray-300'
+                      }`}
+                  >
+                    <span className="text-lg">🇺🇸</span>
+                    <span>English</span>
+                  </button>
+                  <button
+                    onClick={() => changeLanguage('he')}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-purple-600/20 hover:text-white transition-colors flex items-center space-x-2 ${currentLanguage === 'he' ? 'text-purple-400' : 'text-gray-300'
+                      }`}
+                  >
+                    <span className="text-lg">🇮🇱</span>
+                    <span>עברית</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   {user?.profile_image_url ? (
-                    // אם יש תמונת פרופיל, הצג אותה
                     <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-500">
                       <img
                         src={user.profile_image_url}
@@ -103,7 +143,6 @@ const Navbar8 = (props) => {
                       />
                     </div>
                   ) : (
-                    // אם אין תמונת פרופיל, הצג אות ראשונה בעיגול סגול
                     <div className="text-white bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center">
                       {user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                     </div>
@@ -128,7 +167,7 @@ const Navbar8 = (props) => {
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
                       >
-                        Dashboard
+                        {t('navbar.dashboard')}
                       </button>
                       <button
                         onClick={() => {
@@ -137,7 +176,7 @@ const Navbar8 = (props) => {
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white"
                       >
-                        Sign Out
+                        {t('navbar.signOut')}
                       </button>
                     </div>
                   )}
@@ -145,45 +184,35 @@ const Navbar8 = (props) => {
               </div>
             ) : (
               <>
-
                 <button
                   className="navbar8-action11 thq-button-filled thq-button-animated"
                   onClick={() => {
-                    // Check if we're already on the /auth route
                     if (window.location.pathname === '/auth') {
-                      // Just update the URL and reload the page to force re-render
                       window.location.href = '/auth?mode=signup';
                     } else {
-                      // Use normal routing if not on the auth page
                       history.push('/auth?mode=signup');
                     }
                   }}
                 >
                   <span className="thq-body-small">
-                    {props.action1 ?? (
-                      <Fragment>
-                        <span className="navbar8-text18">Sign Up</span>
-                      </Fragment>
-                    )}
+                    <Fragment>
+                      <span className="navbar8-text18">{t('navbar.signUp')}</span>
+                    </Fragment>
                   </span>
                 </button>
-
 
                 <button
                   className="navbar8-action21 thq-button-outline thq-button-animated"
                   onClick={() => {
-                    // Check if we're already on the /auth route
                     if (window.location.pathname === '/auth') {
-                      // Just update the URL and reload the page to force re-render
                       window.location.href = '/auth?mode=login';
                     } else {
-                      // Use normal routing if not on the auth page
                       history.push('/auth?mode=login');
                     }
                   }}
                 >
                   <span className="thq-body-small">
-                    <span className="navbar8-text25">Log In</span>
+                    <span className="navbar8-text25">{t('navbar.logIn')}</span>
                   </span>
                 </button>
               </>
@@ -211,31 +240,25 @@ const Navbar8 = (props) => {
             </div>
             <nav className="navbar8-links2">
               <Link to="/">
-                {props.link1 ?? (
-                  <Fragment>
-                    <span className="navbar8-text26 thq-link thq-body-small">
-                      Home
-                    </span>
-                  </Fragment>
-                )}
+                <Fragment>
+                  <span className="navbar8-text26 thq-link thq-body-small">
+                    {t('navbar.home')}
+                  </span>
+                </Fragment>
               </Link>
               <a href={props.link2Url}>
-                {props.link2 ?? (
-                  <Fragment>
-                    <span className="navbar8-text15 thq-link thq-body-small">
-                      about
-                    </span>
-                  </Fragment>
-                )}
+                <Fragment>
+                  <span className="navbar8-text15 thq-link thq-body-small">
+                    {t('navbar.about')}
+                  </span>
+                </Fragment>
               </a>
               <a href={props.link3Url}>
-                {props.link3 ?? (
-                  <Fragment>
-                    <span className="navbar8-text22 thq-link thq-body-small">
-                      contact
-                    </span>
-                  </Fragment>
-                )}
+                <Fragment>
+                  <span className="navbar8-text22 thq-link thq-body-small">
+                    {t('navbar.contact')}
+                  </span>
+                </Fragment>
               </a>
               <div className="navbar8-link4-accordion">
                 <div
@@ -243,13 +266,11 @@ const Navbar8 = (props) => {
                   className="navbar8-trigger"
                 >
                   <span>
-                    {props.link4 ?? (
-                      <Fragment>
-                        <span className="navbar8-text14 thq-link thq-body-small">
-                          search
-                        </span>
-                      </Fragment>
-                    )}
+                    <Fragment>
+                      <span className="navbar8-text14 thq-link thq-body-small">
+                        {t('navbar.search')}
+                      </span>
+                    </Fragment>
                   </span>
                   <div className="navbar8-icon-container2">
                     {link5AccordionOpen && (
@@ -279,23 +300,18 @@ const Navbar8 = (props) => {
                         />
                         <div className="navbar8-content1">
                           <span>
-                            {props.page1 ?? (
-                              <Fragment>
-                                <span className="navbar8-text27 thq-body-large">
-                                  Home
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text27 thq-body-large">
+                                {t('navbar.home')}
+                              </span>
+                            </Fragment>
                           </span>
                           <span>
-                            {props.page1Description ?? (
-                              <Fragment>
-                                <span className="navbar8-text16 thq-body-small">
-                                  Explore tattoo artists based on style and
-                                  location
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text16 thq-body-small">
+                                Explore tattoo artists based on style and location
+                              </span>
+                            </Fragment>
                           </span>
                         </div>
                       </div>
@@ -309,22 +325,18 @@ const Navbar8 = (props) => {
                         />
                         <div className="navbar8-content2">
                           <span>
-                            {props.page2 ?? (
-                              <Fragment>
-                                <span className="navbar8-text20 thq-body-large">
-                                  About
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text20 thq-body-large">
+                                {t('navbar.about')}
+                              </span>
+                            </Fragment>
                           </span>
                           <span>
-                            {props.page2Description ?? (
-                              <Fragment>
-                                <span className="navbar8-text17 thq-body-small">
-                                  Learn more about our mission and team
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text17 thq-body-small">
+                                Learn more about our mission and team
+                              </span>
+                            </Fragment>
                           </span>
                         </div>
                       </div>
@@ -338,22 +350,18 @@ const Navbar8 = (props) => {
                         />
                         <div className="navbar8-content3">
                           <span>
-                            {props.page3 ?? (
-                              <Fragment>
-                                <span className="navbar8-text24 thq-body-large">
-                                  Contact
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text24 thq-body-large">
+                                {t('navbar.contact')}
+                              </span>
+                            </Fragment>
                           </span>
                           <span>
-                            {props.page3Description ?? (
-                              <Fragment>
-                                <span className="navbar8-text19 thq-body-small">
-                                  Get in touch with us for any inquiries
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text19 thq-body-small">
+                                Get in touch with us for any inquiries
+                              </span>
+                            </Fragment>
                           </span>
                         </div>
                       </div>
@@ -367,22 +375,18 @@ const Navbar8 = (props) => {
                         />
                         <div className="navbar8-content4">
                           <span>
-                            {props.page4 ?? (
-                              <Fragment>
-                                <span className="navbar8-text21 thq-body-large">
-                                  Search
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text21 thq-body-large">
+                                {t('navbar.search')}
+                              </span>
+                            </Fragment>
                           </span>
                           <span>
-                            {props.page4Description ?? (
-                              <Fragment>
-                                <span className="navbar8-text23 thq-body-small">
-                                  Find tattoo artists by style or location
-                                </span>
-                              </Fragment>
-                            )}
+                            <Fragment>
+                              <span className="navbar8-text23 thq-body-small">
+                                Find tattoo artists by style or location
+                              </span>
+                            </Fragment>
                           </span>
                         </div>
                       </div>
@@ -390,24 +394,40 @@ const Navbar8 = (props) => {
                   </div>
                 )}
               </div>
+
+              {/* Language switcher למובייל */}
+              <div className="mt-4 px-4">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => changeLanguage('en')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${currentLanguage === 'en' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300'
+                      }`}
+                  >
+                    🇺🇸 English
+                  </button>
+                  <button
+                    onClick={() => changeLanguage('he')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${currentLanguage === 'he' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300'
+                      }`}
+                  >
+                    🇮🇱 עברית
+                  </button>
+                </div>
+              </div>
             </nav>
             <div className="navbar8-buttons2">
               <button className="thq-button-filled">
                 <span>
-                  {props.action1 ?? (
-                    <Fragment>
-                      <span className="navbar8-text18">Sign Up</span>
-                    </Fragment>
-                  )}
+                  <Fragment>
+                    <span className="navbar8-text18">{t('navbar.signUp')}</span>
+                  </Fragment>
                 </span>
               </button>
               <button className="thq-button-outline">
                 <span>
-                  {props.action2 ?? (
-                    <Fragment>
-                      <span className="navbar8-text25">Log In</span>
-                    </Fragment>
-                  )}
+                  <Fragment>
+                    <span className="navbar8-text25">{t('navbar.logIn')}</span>
+                  </Fragment>
                 </span>
               </button>
             </div>
@@ -445,22 +465,18 @@ const Navbar8 = (props) => {
                   />
                   <div className="navbar8-content5">
                     <span>
-                      {props.page1 ?? (
-                        <Fragment>
-                          <span className="navbar8-text27 thq-body-large">
-                            Home
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text27 thq-body-large">
+                          {t('navbar.home')}
+                        </span>
+                      </Fragment>
                     </span>
                     <span>
-                      {props.page1Description ?? (
-                        <Fragment>
-                          <span className="navbar8-text16 thq-body-small">
-                            Explore tattoo artists based on style and location
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text16 thq-body-small">
+                          Explore tattoo artists based on style and location
+                        </span>
+                      </Fragment>
                     </span>
                   </div>
                 </div>
@@ -474,22 +490,18 @@ const Navbar8 = (props) => {
                   />
                   <div className="navbar8-content6">
                     <span>
-                      {props.page2 ?? (
-                        <Fragment>
-                          <span className="navbar8-text20 thq-body-large">
-                            About
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text20 thq-body-large">
+                          {t('navbar.about')}
+                        </span>
+                      </Fragment>
                     </span>
                     <span>
-                      {props.page2Description ?? (
-                        <Fragment>
-                          <span className="navbar8-text17 thq-body-small">
-                            Learn more about our mission and team
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text17 thq-body-small">
+                          Learn more about our mission and team
+                        </span>
+                      </Fragment>
                     </span>
                   </div>
                 </div>
@@ -503,22 +515,18 @@ const Navbar8 = (props) => {
                   />
                   <div className="navbar8-content7">
                     <span>
-                      {props.page3 ?? (
-                        <Fragment>
-                          <span className="navbar8-text24 thq-body-large">
-                            Contact
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text24 thq-body-large">
+                          {t('navbar.contact')}
+                        </span>
+                      </Fragment>
                     </span>
                     <span>
-                      {props.page3Description ?? (
-                        <Fragment>
-                          <span className="navbar8-text19 thq-body-small">
-                            Get in touch with us for any inquiries
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text19 thq-body-small">
+                          Get in touch with us for any inquiries
+                        </span>
+                      </Fragment>
                     </span>
                   </div>
                 </div>
@@ -532,22 +540,18 @@ const Navbar8 = (props) => {
                   />
                   <div className="navbar8-content8">
                     <span>
-                      {props.page4 ?? (
-                        <Fragment>
-                          <span className="navbar8-text21 thq-body-large">
-                            Search
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text21 thq-body-large">
+                          {t('navbar.search')}
+                        </span>
+                      </Fragment>
                     </span>
                     <span>
-                      {props.page4Description ?? (
-                        <Fragment>
-                          <span className="navbar8-text23 thq-body-small">
-                            Find tattoo artists by style or location
-                          </span>
-                        </Fragment>
-                      )}
+                      <Fragment>
+                        <span className="navbar8-text23 thq-body-small">
+                          Find tattoo artists by style or location
+                        </span>
+                      </Fragment>
                     </span>
                   </div>
                 </div>
@@ -560,6 +564,13 @@ const Navbar8 = (props) => {
         <div
           onClick={() => setLink5DropdownVisible(false)}
           className="navbar8-container8"
+        ></div>
+      )}
+      {/* Close language menu when clicking outside */}
+      {languageMenuOpen && (
+        <div
+          onClick={() => setLanguageMenuOpen(false)}
+          className="fixed inset-0 z-40"
         ></div>
       )}
     </header>

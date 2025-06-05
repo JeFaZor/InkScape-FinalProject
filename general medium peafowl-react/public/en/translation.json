@@ -1,0 +1,101 @@
+{
+    "navbar": {
+      "home": "Home",
+      "about": "About",
+      "contact": "Contact", 
+      "search": "Search",
+      "signUp": "Sign Up",
+      "logIn": "Log In",
+      "signOut": "Sign Out",
+      "dashboard": "Dashboard"
+    },
+    "hero": {
+      "title": "Find Your Perfect Tattoo Artist",
+      "subtitle": "Discover talented tattoo artists based on their unique styles and specialties. Search by location or explore the map to find the perfect match for your next tattoo."
+    },
+    "search": {
+      "placeholder": "Search for tattoo artist by name or style...",
+      "style": "Style",
+      "location": "Location",
+      "tags": "Tags",
+      "clearFilters": "Clear Filters",
+      "searchArtists": "Search Artists",
+      "searching": "Searching...",
+      "aiImageAnalysis": "Find Artists Using AI Image Analysis",
+      "uploadDescription": "Upload a tattoo image and our AI will analyze its style to find artists who specialize in similar work",
+      "or": "or",
+      "searchLocation": "Search location...",
+      "currentLocation": "Current location",
+      "confirmLocation": "Confirm location",
+      "setLocation": "Set your location",
+      "searchRadius": "Search radius",
+      "removeImage": "Remove Image",
+      "uploadImage": "Upload",
+      "searchTags": "Search tags...",
+      "noMatchingTags": "No matching tags found",
+      "results": {
+        "title": "Search Results",
+        "found": "Found",
+        "artists": "artists",
+        "for": "for",
+        "in": "in",
+        "style": "style",
+        "within": "within",
+        "withTags": "with tags",
+        "noResults": "No results found",
+        "tryAdjusting": "Try adjusting your search criteria"
+      }
+    },
+    "styles": {
+      "traditional": "Traditional",
+      "newSchool": "New School",
+      "japanese": "Japanese",
+      "fineline": "Fineline",
+      "geometric": "Geometric",
+      "microRealism": "Micro Realism",
+      "realism": "Realism",
+      "dotWork": "Dot Work",
+      "darkArt": "Dark Art",
+      "flowers": "Flowers",
+      "surrealism": "Surrealism",
+      "trashPolka": "Trash Polka"
+    },
+    "tags": {
+      "blackGrey": "Black & Grey",
+      "color": "Color",
+      "coverUp": "Cover Up",
+      "small": "Small",
+      "large": "Large",
+      "lettering": "Lettering",
+      "portrait": "Portrait",
+      "minimalist": "Minimalist",
+      "watercolor": "Watercolor"
+    },
+    "auth": {
+      "welcomeBack": "Welcome Back",
+      "createAccount": "Create Account",
+      "enterDetailsSignIn": "Enter your details to sign in",
+      "enterDetailsGetStarted": "Enter your details to get started",
+      "email": "Email",
+      "password": "Password",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign In",
+      "processing": "Processing...",
+      "dontHaveAccount": "Don't have an account? Sign up",
+      "alreadyHaveAccount": "Already have an account? Sign in"
+    },
+    "common": {
+      "loading": "Loading...",
+      "error": "Error",
+      "cancel": "Cancel",
+      "save": "Save",
+      "edit": "Edit",
+      "confirm": "Confirm",
+      "close": "Close",
+      "remove": "Remove",
+      "upload": "Upload"
+    }
+  }

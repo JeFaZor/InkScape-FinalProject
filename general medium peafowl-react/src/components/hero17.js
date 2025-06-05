@@ -1,7 +1,7 @@
-import React, { Fragment } from 'react'
+import React, { Fragment, useEffect } from 'react'
 import { useHistory } from 'react-router-dom';
-import SearchSection from './SearchSection' 
-
+import { useTranslation } from 'react-i18next'; // הוספה חדשה
+import SearchSection from './SearchSection'
 
 import Script from 'dangerous-html/react'
 import PropTypes from 'prop-types'
@@ -31,43 +31,39 @@ import flowers from './assets/tat10.jpg';
 import surrealism from './assets/tat11.jpg';
 import trashPolka from './assets/tat12.jpg';
 
-
 import './hero17.css'
 
 const Hero17 = (props) => {
   const history = useHistory();
+  const { t, i18n } = useTranslation(); // עדכן את השורה הזאת
+
+
+  // useEffect כאן
+  useEffect(() => {
+    // Force re-render when language changes
+  }, [i18n.language]);
+
+
+
 
   const handleClick = () => {
     history.push('/get-started');
   };
+
+
   return (
     <div className="hero17-header78" style={{ padding: '0' }}>
       <div className="hero17-column thq-section-max-width thq-section-padding" >
         <div className="hero17-content1">
-          <h1>
-            {props.heading1 ?? (
-              <Fragment>
-                <h1 className="hero17-text8 thq-heading-1">
-                  Find Your Perfect Tattoo Artist
-                </h1>
-              </Fragment>
-            )}
+          <h1 className="hero17-text8 thq-heading-1">
+            {t('hero.title')}
           </h1>
-          <p>
-            {props.content1 ?? (
-              <Fragment>
-                <p className="hero17-text7 thq-body-large">
-                  Discover talented tattoo artists based on their unique styles
-                  and specialties. Search by location or explore the map to find
-                  the perfect match for your next tattoo.
-                </p>
-              </Fragment>
-            )}
+          <p className="hero17-text7 thq-body-large">
+            {t('hero.subtitle')}
           </p>
         </div>
         <div className="hero17-actions">
-         
-        <SearchSection />
+          <SearchSection />
         </div>
       </div>
       <div className="hero17-content2">

@@ -1,0 +1,102 @@
+{
+  "navbar": {
+    "home": "בית",
+    "about": "אודות", 
+    "contact": "צור קשר",
+    "search": "חיפוש",
+    "signUp": "הירשם",
+    "logIn": "התחבר",
+    "signOut": "התנתק",
+    "dashboard": "לוח בקרה"
+  },
+  "hero": {
+    "title": "מצא את מקעקע החלומות שלך",
+    "subtitle": "גלה מקעקעים מוכשרים על בסיס הסגנונות וההתמחויות הייחודיות שלהם. חפש לפי מיקום או חקור במפה כדי למצוא את ההתאמה המושלמת לקעקוע הבא שלך."
+  },
+  "search": {
+    "placeholder": "חפש מקעקע לפי שם או סגנון...",
+    "style": "סגנון",
+    "location": "מיקום",
+    "tags": "תגיות", 
+    "clearFilters": "נקה מסננים",
+    "searchArtists": "חפש מקעקעים",
+    "searching": "מחפש...",
+    "aiImageAnalysis": "מצא מקעקעים באמצעות ניתוח תמונה בבינה מלאכותית",
+    "uploadDescription": "העלה תמונת קעקוע והבינה המלאכותית שלנו תנתח את הסגנון כדי למצוא מקעקעים המתמחים בעבודה דומה",
+    "or": "או",
+    "searchLocation": "חפש מיקום...",
+    "currentLocation": "מיקום נוכחי",
+    "confirmLocation": "אשר מיקום",
+    "setLocation": "הגדר את המיקום שלך",
+    "searchRadius": "רדיוס חיפוש",
+    "removeImage": "הסר תמונה",
+    "uploadImage": "העלה",
+    "searchTags": "חפש תגיות...",
+    "noMatchingTags": "לא נמצאו תגיות מתאימות",
+    "results": {
+      "title": "תוצאות חיפוש",
+      "found": "נמצאו",
+      "artists": "מקעקעים",
+      "for": "עבור",
+      "in": "ב",
+      "style": "סגנון",
+      "within": "ברדיוס של",
+      "withTags": "עם תגיות",
+      "noResults": "לא נמצאו תוצאות",
+      "tryAdjusting": "נסה לשנות את קריטריוני החיפוש"
+      
+    }
+  },
+  "styles": {
+    "traditional": "מסורתי",
+    "newSchool": "ניו סקול",
+    "japanese": "יפני",
+    "fineline": "קווים דקים",
+    "geometric": "גיאומטרי",
+    "microRealism": "מיקרו ריאליזם",
+    "realism": "ריאליזם",
+    "dotWork": "נקודות",
+    "darkArt": "אמנות אפלה",
+    "flowers": "פרחים",
+    "surrealism": "סוריאליזם",
+    "trashPolka": "טראש פולקה"
+  },
+  "tags": {
+    "blackGrey": "שחור ואפור",
+    "color": "צבעוני",
+    "coverUp": "כיסוי קעקוע",
+    "small": "קטן",
+    "large": "גדול",
+    "lettering": "אותיות",
+    "portrait": "פורטרט",
+    "minimalist": "מינימליסטי",
+    "watercolor": "צבעי מים"
+  },
+  "auth": {
+    "welcomeBack": "ברוך שובך",
+    "createAccount": "צור חשבון",
+    "enterDetailsSignIn": "הכנס את הפרטים שלך כדי להתחבר",
+    "enterDetailsGetStarted": "הכנס את הפרטים שלך כדי להתחיל",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "firstName": "שם פרטי",
+    "lastName": "שם משפחה",
+    "rememberMe": "זכור אותי",
+    "forgotPassword": "שכחת סיסמה?",
+    "signIn": "התחבר",
+    "processing": "מעבד...",
+    "dontHaveAccount": "אין לך חשבון? הירשם",
+    "alreadyHaveAccount": "כבר יש לך חשבון? התחבר"
+  },
+  "common": {
+    "loading": "טוען...",
+    "error": "שגיאה",
+    "cancel": "ביטול",
+    "save": "שמור",
+    "edit": "ערוך",
+    "confirm": "אשר",
+    "close": "סגור",
+    "remove": "הסר",
+    "upload": "העלה"
+  }
+}

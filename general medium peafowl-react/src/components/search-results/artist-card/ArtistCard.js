@@ -1,36 +1,59 @@
-import React, { useState, useEffect } from 'react';
+// src/components/search-results/artist-card/ArtistCard.js
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Star, MapPin, MessageCircle, ExternalLink, Check, ZoomIn, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Function to convert GPS coordinates to a readable address using OpenStreetMap Nominatim API
+/**
+ * Custom hook to convert GPS coordinates to a readable address
+ * Fixed to prevent memory leaks when component unmounts
+ */
 const useReverseGeocode = (coordinates) => {
   const [address, setAddress] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Use ref to track component mounted state
+  const isMounted = useRef(true);
+
+  // Reset mounted flag when component unmounts
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     const fetchAddress = async () => {
-      // Check if the input is in coordinate format (e.g., "31.7683, 35.2137" or "(31.7683,35.2137)")
+      // Check if the input is in coordinate format
       const coordString = coordinates.replace(/[()]/g, ''); // Remove parentheses if present
       const coordRegex = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
 
       if (!coordinates || !coordRegex.test(coordString)) {
-        setAddress(coordinates); // Return as is if not in coordinate format
+        if (isMounted.current) {
+          setAddress(coordinates); // Return as is if not in coordinate format
+        }
         return;
       }
 
       const [lat, lng] = coordString.split(',').map(coord => parseFloat(coord.trim()));
 
       try {
-        setLoading(true);
-        // Using OpenStreetMap's Nominatim API for reverse geocoding
-        // Note: For production use, you should host your own Nominatim instance or use a commercial provider
+        if (isMounted.current) {
+          setLoading(true);
+        }
+
+        // Create abort controller for the fetch request
+        const controller = new AbortController();
+        const signal = controller.signal;
+
+        // Fetch address data from OpenStreetMap
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
           {
+            signal: signal,
             headers: {
               'Accept-Language': 'he', // Set to Hebrew for addresses in Israel
-              'User-Agent': 'INKSCAPE-App/1.0' // Replace with your app name - required by Nominatim ToS
+              'User-Agent': 'INKSCAPE-App/1.0' // Required by Nominatim ToS
             }
           }
         );
@@ -41,34 +64,49 @@ const useReverseGeocode = (coordinates) => {
 
         const data = await response.json();
 
-        // Format the address based on available data
-        if (data && data.address) {
-          const { road, city, town, village, suburb, neighbourhood, state } = data.address;
+        // Check if component is still mounted before updating state
+        if (isMounted.current) {
+          // Format the address based on available data
+          if (data && data.address) {
+            const { road, city, town, village, suburb, neighbourhood, state } = data.address;
 
-          // Try to get the most specific location (city first, then town, etc.)
-          const locality = city || town || village || suburb || state || '';
-          const street = road || neighbourhood || '';
+            // Try to get the most specific location
+            const locality = city || town || village || suburb || state || '';
+            const street = road || neighbourhood || '';
 
-          if (locality && street) {
-            setAddress(`${street}, ${locality}`);
-          } else if (locality) {
-            setAddress(locality);
-          } else if (street) {
-            setAddress(street);
+            if (locality && street) {
+              setAddress(`${street}, ${locality}`);
+            } else if (locality) {
+              setAddress(locality);
+            } else if (street) {
+              setAddress(street);
+            } else {
+              setAddress(data.display_name);
+            }
           } else {
-            setAddress(data.display_name);
+            // If we can't get a proper address, format the coordinates nicely
+            setAddress(`${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
           }
-        } else {
-          // If we can't get a proper address, format the coordinates nicely
-          setAddress(`${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
         }
       } catch (error) {
+        // Ignore abort errors as they are expected when component unmounts
+        if (error.name === 'AbortError') {
+          console.log('Fetch request was aborted');
+          return;
+        }
+
         console.error('Error fetching address:', error);
-        setError(error);
-        // Fallback to formatted coordinates
-        setAddress(`${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
+
+        // Only update state if still mounted
+        if (isMounted.current) {
+          setError(error);
+          // Fallback to formatted coordinates
+          setAddress(`${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
 
@@ -80,7 +118,24 @@ const useReverseGeocode = (coordinates) => {
   return { address, loading, error };
 };
 
-// ImageModal Component for Lightbox functionality
+/**
+ * Format a name for use in URL
+ */
+const formatNameForUrl = (name) => {
+  if (!name) return 'unknown-artist';
+
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, '_')      // Replace spaces with underscores
+    .replace(/[^\w\_]+/g, '')  // Remove non-alphanumeric characters except underscores
+    .replace(/\_\_+/g, '_')    // Replace multiple consecutive underscores with a single one
+    .replace(/^_+/, '')        // Remove underscores from the beginning
+    .replace(/_+$/, '');       // Remove underscores from the end
+};
+
+/**
+ * ImageModal Component for Lightbox functionality
+ */
 const ImageModal = ({ isOpen, onClose, images, currentIndex, setCurrentIndex }) => {
   const [scale, setScale] = useState(1);
 
@@ -165,17 +220,27 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, setCurrentIndex }) 
 };
 
 const ArtistCard = ({ artist = {} }) => {
-  // הוספת state עבור המודל והתמונה הנוכחית
+  // Add a ref to track if component is mounted
+  const isMounted = useRef(true);
+
+  // Reset the flag when component unmounts
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // State for modal and image display
   const [modalOpen, setModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [hoveredImageIndex, setHoveredImageIndex] = useState(null);
 
-  // כולל כל השדות מטבלת artist_profiles
+  // Destructure artist properties with defaults
   const {
     id,
     name = 'Unknown Artist',
     profileImage = '/api/placeholder/400/400',
-    profile_image_url, // שדה חדש מסופאבייס
+    profile_image_url, // Field from Supabase
     location = 'Location not specified',
     styles = [],
     rating = 0,
@@ -185,7 +250,7 @@ const ArtistCard = ({ artist = {} }) => {
       '/api/placeholder/400/400',
       '/api/placeholder/400/400'
     ],
-    recent_works_urls = [], // שדה חדש מסופאבייס
+    recent_works_urls = [], // Field from Supabase
     instagramHandle = '',
     isVerified = false,
     serviceArea = '',
@@ -193,29 +258,31 @@ const ArtistCard = ({ artist = {} }) => {
     avg_rating
   } = artist;
 
-  // משתמש בדירוג הממוצע מטבלת artist_profiles אם קיים
+  // Use average rating from database if available
   const displayRating = avg_rating || rating;
 
-  // משתמש בתמונת פרופיל מהדאטאבייס אם קיימת, אחרת בברירת המחדל
+  // Use profile image from database if available, otherwise use default
   const displayProfileImage = profile_image_url || profileImage;
 
-  // משתמש במערך תמונות עבודות מהדאטאבייס אם קיים, אחרת בברירת המחדל
+  // Use work images from database if available, otherwise use default
   const displayRecentWorks = recent_works_urls.length > 0
     ? recent_works_urls
     : recentWorks;
 
-  // המרת קואורדינטות למיקום קריא
+  // Convert coordinates to readable location
   const { address: formattedLocation, loading: addressLoading } = useReverseGeocode(location);
 
-  // השתמש במיקום מעובד או באזור שירות, תלוי במה שזמין
+  // Use formatted location or service area, depending on what's available
   const displayLocation = addressLoading
     ? 'Loading location...'
     : (formattedLocation || serviceArea || 'Location not specified');
 
-  // פונקציה לפתיחת המודל עם תמונה ספציפית
+  // Function to open image modal with specific image
   const openImageModal = (index) => {
-    setCurrentImageIndex(index);
-    setModalOpen(true);
+    if (isMounted.current) {
+      setCurrentImageIndex(index);
+      setModalOpen(true);
+    }
   };
 
   return (
@@ -234,7 +301,13 @@ const ArtistCard = ({ artist = {} }) => {
         {/* Artist Name and Verification */}
         <div className="flex items-center justify-between w-full">
           <div className="flex-1 mr-1 min-w-0">
-            <Link to={`/artist/${id}`} className="text-lg font-semibold text-white hover:text-purple-400 transition-colors block truncate">
+            <Link
+              to={{
+                pathname: `/artist/${formatNameForUrl(name)}`,
+                state: { artistId: id }
+              }}
+              className="text-lg font-semibold text-white hover:text-purple-400 transition-colors block truncate"
+            >
               {name}
             </Link>
           </div>
@@ -247,7 +320,7 @@ const ArtistCard = ({ artist = {} }) => {
         </div>
       </div>
 
-      {/* Tattoo Gallery - עם פונקציונליות hover וclick */}
+      {/* Tattoo Gallery - with hover and click functionality */}
       <div className="relative bg-gray-800" style={{ height: "160px" }}>
         <div className="grid grid-cols-3 gap-1 h-full">
           {displayRecentWorks.slice(0, 3).map((work, index) => (
@@ -255,8 +328,8 @@ const ArtistCard = ({ artist = {} }) => {
               key={index}
               className="relative overflow-hidden cursor-pointer group"
               onClick={() => openImageModal(index)}
-              onMouseEnter={() => setHoveredImageIndex(index)}
-              onMouseLeave={() => setHoveredImageIndex(null)}
+              onMouseEnter={() => isMounted.current && setHoveredImageIndex(index)}
+              onMouseLeave={() => isMounted.current && setHoveredImageIndex(null)}
             >
               <img
                 src={work}
@@ -264,7 +337,7 @@ const ArtistCard = ({ artist = {} }) => {
                 className={`w-full h-full object-cover transition-transform duration-200 ${hoveredImageIndex === index ? 'scale-110' : 'scale-100'
                   }`}
               />
-              {/* אייקון זום מופיע בhover */}
+              {/* Zoom icon on hover */}
               <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 transition-opacity duration-200 ${hoveredImageIndex === index ? 'opacity-100' : 'opacity-0'
                 }`}>
                 <ZoomIn className="text-white" size={24} />
@@ -291,7 +364,7 @@ const ArtistCard = ({ artist = {} }) => {
           </div>
         </div>
 
-        {/* Bio - מידע חדש מטבלת artist_profiles */}
+        {/* Bio */}
         {bio && (
           <div className="text-gray-300 my-3 line-clamp-2 text-sm">
             {bio}
@@ -300,7 +373,7 @@ const ArtistCard = ({ artist = {} }) => {
 
         {/* Styles */}
         {styles.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-2 mt-3">
             {styles.map((style, index) => (
               <span
                 key={index}
@@ -330,13 +403,13 @@ const ArtistCard = ({ artist = {} }) => {
         )}
       </div>
 
-      {/* מודל תמונה (לייטבוקס) */}
+      {/* Image modal (lightbox) */}
       <ImageModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => isMounted.current && setModalOpen(false)}
         images={displayRecentWorks}
         currentIndex={currentImageIndex}
-        setCurrentIndex={setCurrentImageIndex}
+        setCurrentIndex={(index) => isMounted.current && setCurrentImageIndex(index)}
       />
     </div>
   );

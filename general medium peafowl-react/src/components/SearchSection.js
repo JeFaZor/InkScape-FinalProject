@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+
 import { useHistory, useLocation } from 'react-router-dom';
 import { Search, Image, MapPin, Filter, Tag, X, Loader2 } from 'lucide-react';
 import GenrePicker from './get-started/GenrePicker';
@@ -53,6 +55,8 @@ const SearchSection = () => {
   const { user } = useAuth();
   const history = useHistory();
   const location = useLocation();
+  const { t } = useTranslation();
+
 
   // State initialization
   const [tagSearchTerm, setTagSearchTerm] = useState('');
@@ -73,6 +77,28 @@ const SearchSection = () => {
   const [locationRadius, setLocationRadius] = useState(5);
 
   const fileInputRef = React.useRef(null);
+  
+  // Add a ref to the search results section for scrolling
+  const searchResultsRef = useRef(null);
+
+  // Add effect to automatically scroll to search results when they appear
+  useEffect(() => {
+    if (hasSearched && searchResultsRef.current) {
+      // Wait a moment to ensure the component has rendered
+      setTimeout(() => {
+        // Calculate position - scroll to slightly above the element for better visibility
+        const yOffset = -125; // 50px above the element
+        const element = searchResultsRef.current;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        
+        // Use slower scrolling with lower speed
+        window.scrollTo({
+          top: y,
+          behavior: 'smooth'
+        });
+      }, 250); // Longer timeout for more reliability
+    }
+  }, [hasSearched]);
 
   // Parse URL parameters on component mount and when URL changes
   useEffect(() => {
@@ -147,12 +173,17 @@ const SearchSection = () => {
     );
   }, [tagSearchTerm]);
 
-  // Handle search button click
+  // Handle search button click - UPDATED to close filters when searching
   const handleSearch = () => {
     // Prevent search if already searching
     if (isSearching) return;
 
     setIsSearching(true);
+    
+    // Close all filter dropdowns when search is initiated
+    setShowStyleFilter(false);
+    setShowLocationFilter(false);
+    setShowTagFilter(false);
 
     // Create search parameters object
     const params = new URLSearchParams();
@@ -187,13 +218,11 @@ const SearchSection = () => {
     if (file) {
       setSelectedImage(URL.createObjectURL(file));
 
-
       setIsProcessing(true);
 
       try {
         const formData = new FormData();
         formData.append('image', file);
-
 
         const response = await fetch('http://localhost:5000/api/analyze-tattoo', {
           method: 'POST',
@@ -214,7 +243,6 @@ const SearchSection = () => {
           await new Promise(resolve => setTimeout(resolve, remainingTime));
         }
 
-
         if (result.style) {
           const matchedStyle = genres.find(genre => genre.name === result.style);
 
@@ -223,11 +251,9 @@ const SearchSection = () => {
             setShowStyleFilter(false);
           }
 
-
           if (result.tags && result.tags.length > 0) {
             setSelectedTags(result.tags);
           }
-
 
           alert(`Style detected: ${result.style}\nTags: ${result.tags.join(', ')}`);
         }
@@ -235,7 +261,6 @@ const SearchSection = () => {
         console.error('Error analyzing image:', error);
         alert('Failed to analyze the image. Please try again.');
       } finally {
-
         setIsProcessing(false);
       }
     }
@@ -299,7 +324,7 @@ const SearchSection = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search for tattoo artist by name or style..."
+                placeholder={t('search.placeholder')}
                 className="w-full h-14 px-6 rounded-lg bg-gray-800 text-white border border-gray-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
               />
               {searchTerm && (
@@ -327,7 +352,7 @@ const SearchSection = () => {
                 }`}
             >
               <Filter className="w-4 h-4" />
-              {selectedStyle ? selectedStyle.name : 'Style'}
+              {selectedStyle ? selectedStyle.name : t('search.style')}
             </button>
 
             <button
@@ -342,7 +367,7 @@ const SearchSection = () => {
                 }`}
             >
               <MapPin className="w-4 h-4" />
-              {selectedLocation || 'Location'}
+              {selectedLocation || t('search.location')}
             </button>
 
             <button
@@ -357,7 +382,7 @@ const SearchSection = () => {
                 }`}
             >
               <Tag className="w-4 h-4" />
-              {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Tags'}
+              {selectedTags.length > 0 ? `${selectedTags.length} ${t('search.tags')}` : t('search.tags')}
             </button>
 
             {(selectedStyle || selectedLocation || selectedImage || selectedTags.length > 0) && (
@@ -435,8 +460,7 @@ const SearchSection = () => {
 
           {/* Selected Tags Display */}
           {selectedTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {selectedTags.map((tag) => (
+            <div className="flex flex-wrap justify-center gap-2 mt-4">              {selectedTags.map((tag) => (
                 <div
                   key={tag}
                   className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-900/50 border border-purple-500 text-purple-200"
@@ -466,7 +490,7 @@ const SearchSection = () => {
             ) : (
               <Search className="w-5 h-5" />
             )}
-            {isSearching ? 'Searching...' : 'Search Artists'}
+            {isSearching ? t('search.searching') : t('search.searchArtists')}
           </button>
 
           {/* Divider with "or" text */}
@@ -522,18 +546,26 @@ const SearchSection = () => {
           </div>
         </div>
       </div>
-      <div className="w-full" style={{ width: '100%', maxWidth: '100%' }}>
+      
+      {/* Search Results with ref for auto-scrolling - adding a visible anchor above */}
+      <div 
+        className="w-full pt-8" /* Added top padding for better scroll position */
+        style={{ width: '100%', maxWidth: '100%' }} 
+        ref={searchResultsRef}
+      >
+        {/* Invisible anchor element for better scroll positioning */}
+        <div className="h-4 -mt-4" id="search-results-anchor"></div>
+        
         {hasSearched && <SearchResults />}
       </div>
 
-      {/* הוסף את האנימציה כאן */}
+      {/* Processing Animation */}
       {isProcessing && (
         <ImageProcessingAnimation
           isVisible={true}
           processingTime={5}
         />
       )}
-
     </div>
   );
 };

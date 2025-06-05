@@ -14,6 +14,27 @@ import {
   Star
 } from 'lucide-react';
 
+// Style ID mapping - same as in other components
+const styleNameToIdMap = {
+  'Traditional': 1,
+  'New School': 2,
+  'Japanese': 3,
+  'Fineline': 4,
+  'Geometric': 5,
+  'Micro Realism': 6,
+  'Realism': 7,
+  'Dot Work': 8,
+  'Dark Art': 9,
+  'Flowers': 10,
+  'Surrealism': 11,
+  'Trash Polka': 12
+};
+
+// Reverse mapping for ID to name conversion
+const styleIdToNameMap = Object.fromEntries(
+  Object.entries(styleNameToIdMap).map(([name, id]) => [id, name])
+);
+
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -32,19 +53,17 @@ const Dashboard = () => {
     styles: []
   });
 
-  // State for file uploads
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState('');
-  const [workImages, setWorkImages] = useState([null, null, null]);
-  const [workImageUrls, setWorkImageUrls] = useState([]);
+  const [portfolioImages, setPortfolioImages] = useState([]);
+  // כל אובייקט יכיל: { id: unique_id, url: string, file: File|null, isNew: boolean }
 
   // References for file inputs
   const profileImageRef = React.useRef(null);
-  const workImageRefs = [React.useRef(null), React.useRef(null), React.useRef(null)];
 
   // List of tattoo styles
   const tattooStyles = [
-    'Traditional', 'New School', 'Anime', 'Fineline', 'Geometric',
+    'Traditional', 'New School', 'Japanese', 'Fineline', 'Geometric',
     'Micro Realism', 'Realism', 'Dot Work', 'Dark Art', 'Flowers',
     'Surrealism', 'Trash Polka'
   ];
@@ -71,14 +90,17 @@ const Dashboard = () => {
 
         // Fetch artist's styles
         let artistStyles = [];
-        if (profileData) {
+        if (profileData && profileData.id) {
           const { data: stylesData, error: stylesError } = await supabase
             .from('styles_artists')
-            .select('styles(name)')
+            .select('style_id')
             .eq('artist_id', profileData.id);
 
           if (!stylesError && stylesData) {
-            artistStyles = stylesData.map(item => item.styles.name);
+            // Convert style IDs to names using our mapping
+            artistStyles = stylesData
+              .map(item => styleIdToNameMap[item.style_id])
+              .filter(Boolean); // Remove any undefined values
           }
         }
 
@@ -100,9 +122,15 @@ const Dashboard = () => {
           setProfileImageUrl(profileData.profile_image_url);
         }
 
-        // Set work image URLs
+        // Set portfolio images from database
         if (profileData?.recent_works_urls && Array.isArray(profileData.recent_works_urls)) {
-          setWorkImageUrls(profileData.recent_works_urls);
+          const existingImages = profileData.recent_works_urls.map((url, index) => ({
+            id: `existing_${index}`,
+            url: url,
+            file: null,
+            isNew: false
+          }));
+          setPortfolioImages(existingImages);
         }
       } catch (error) {
         console.error('Error in profile fetch:', error);
@@ -142,18 +170,59 @@ const Dashboard = () => {
     }
   };
 
-  // Handle work image selection
-  const handleWorkImageChange = (index, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const newWorkImages = [...workImages];
-      newWorkImages[index] = file;
-      setWorkImages(newWorkImages);
+  // Generate unique ID for new images
+  const generateImageId = () => Date.now() + Math.random();
 
-      const newWorkImageUrls = [...workImageUrls];
-      newWorkImageUrls[index] = URL.createObjectURL(file);
-      setWorkImageUrls(newWorkImageUrls);
-    }
+  // Handle adding new images
+  const handleAddNewImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+
+    input.onchange = (e) => {
+      const files = Array.from(e.target.files);
+      const newImages = files.map(file => ({
+        id: generateImageId(),
+        url: URL.createObjectURL(file),
+        file: file,
+        isNew: true
+      }));
+
+      setPortfolioImages(prev => [...prev, ...newImages]);
+    };
+
+    input.click();
+  };
+
+  // Handle removing image
+  const handleRemoveImage = (imageId) => {
+    setPortfolioImages(prev => prev.filter(img => img.id !== imageId));
+  };
+
+  // Handle replacing existing image
+  const handleReplaceImage = (imageId) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        setPortfolioImages(prev => prev.map(img =>
+          img.id === imageId
+            ? {
+              ...img,
+              url: URL.createObjectURL(file),
+              file: file,
+              isNew: true
+            }
+            : img
+        ));
+      }
+    };
+
+    input.click();
   };
 
   // Upload image to Supabase storage
@@ -202,14 +271,19 @@ const Dashboard = () => {
         }
       }
 
-      // Upload work images if changed
-      const workImageUrlsToSave = [...workImageUrls];
-      for (let i = 0; i < workImages.length; i++) {
-        if (workImages[i]) {
-          const uploadedUrl = await uploadImage(workImages[i]);
+      // Upload new images and prepare URLs array
+      const workImageUrlsToSave = [];
+
+      for (const image of portfolioImages) {
+        if (image.isNew && image.file) {
+          // Upload new file
+          const uploadedUrl = await uploadImage(image.file);
           if (uploadedUrl) {
-            workImageUrlsToSave[i] = uploadedUrl;
+            workImageUrlsToSave.push(uploadedUrl);
           }
+        } else if (!image.isNew && image.url) {
+          // Keep existing URL
+          workImageUrlsToSave.push(image.url);
         }
       }
 
@@ -264,38 +338,62 @@ const Dashboard = () => {
         if (updateError) throw updateError;
       }
 
-      // Handle styles
+      // Handle styles using hardcoded mapping
       if (artistId) {
         // Clear existing styles
-        await supabase
+        // Clear existing styles
+        console.log('Clearing existing styles for artist ID:', artistId);
+        const { error: deleteError } = await supabase
           .from('styles_artists')
           .delete()
           .eq('artist_id', artistId);
 
-        // Add selected styles
+        if (deleteError) {
+          console.error('Error deleting existing styles:', deleteError);
+          throw deleteError;
+        }
+
+        // Add selected styles using our mapping
         if (formData.styles.length > 0) {
-          // Get style IDs
-          const { data: styleData } = await supabase
-            .from('styles')
-            .select('id, name')
-            .in('name', formData.styles);
+          const styleAssociations = formData.styles
+            .map(styleName => {
+              const styleId = styleNameToIdMap[styleName];
+              if (styleId) {
+                return {
+                  artist_id: artistId,
+                  style_id: styleId,
+                  expertise_level: 3,
+                  added_at: new Date().toISOString()
+                };
+              }
+              return null;
+            })
+            .filter(Boolean); // Remove any null values
 
-          if (styleData && styleData.length > 0) {
-            // Create associations
-            const styleAssociations = styleData.map(style => ({
-              artist_id: artistId,
-              style_id: style.id,
-              expertise_level: 3,
-              added_at: new Date().toISOString()
-            }));
-
-            await supabase
+          if (styleAssociations.length > 0) {
+            const { error: stylesError } = await supabase
               .from('styles_artists')
-              .insert(styleAssociations);
+              .upsert(styleAssociations);
+
+            if (stylesError) {
+              console.error('Error saving styles:', stylesError);
+              console.error('Full error object:', JSON.stringify(stylesError, null, 2));
+              console.error('Error message:', stylesError.message);
+              console.error('Error code:', stylesError.code);
+              console.error('Error details:', stylesError.details);
+              console.error('Style associations that failed:', styleAssociations);
+              console.error('Artist ID:', artistId);
+              console.error('Form data styles:', formData.styles);
+              throw stylesError;
+            }
           }
         }
       }
 
+      // Reset file states after successful save
+      setProfileImage(null);
+      // Update portfolio images to mark all as saved (not new)
+      setPortfolioImages(prev => prev.map(img => ({ ...img, file: null, isNew: false })));
       // Turn off edit mode
       setEditMode(false);
 
@@ -336,7 +434,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-black bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-150/15 via-black to-black -mt-8">
-  
+
 
       {/* Main Content */}
       <main className="container mx-auto py-8 px-4">
@@ -385,8 +483,8 @@ const Dashboard = () => {
             <button
               onClick={() => setActiveTab('profile')}
               className={`py-2 px-4 text-white relative ${activeTab === 'profile'
-                  ? 'font-medium border-b-2 border-purple-500'
-                  : 'text-gray-400 hover:text-gray-200'
+                ? 'font-medium border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-gray-200'
                 }`}
             >
               Profile
@@ -394,8 +492,8 @@ const Dashboard = () => {
             <button
               onClick={() => setActiveTab('portfolio')}
               className={`py-2 px-4 text-white relative ${activeTab === 'portfolio'
-                  ? 'font-medium border-b-2 border-purple-500'
-                  : 'text-gray-400 hover:text-gray-200'
+                ? 'font-medium border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-gray-200'
                 }`}
             >
               Portfolio
@@ -403,8 +501,8 @@ const Dashboard = () => {
             <button
               onClick={() => setActiveTab('stats')}
               className={`py-2 px-4 text-white relative ${activeTab === 'stats'
-                  ? 'font-medium border-b-2 border-purple-500'
-                  : 'text-gray-400 hover:text-gray-200'
+                ? 'font-medium border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-gray-200'
                 }`}
             >
               Statistics
@@ -429,13 +527,20 @@ const Dashboard = () => {
                       />
                     </div>
 
+                    {/* כפתור הוספת תמונה חדשה */}
                     {editMode && (
-                      <button
-                        onClick={() => profileImageRef.current?.click()}
-                        className="absolute bottom-0 right-0 bg-purple-600 p-2 rounded-full text-white hover:bg-purple-700 transition-colors"
-                      >
-                        <Upload className="w-4 h-4" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={handleAddImageSlot}
+                          className="aspect-square w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg hover:border-purple-500 transition-colors"
+                        >
+                          <Upload className="text-gray-400 mb-2" size={24} />
+                          <span className="text-sm text-gray-400">Add Image</span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            {workImageUrls.length} images
+                          </span>
+                        </button>
+                      </div>
                     )}
 
                     <input
@@ -519,7 +624,7 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Right Column - Profile Details */}
             <div className="md:col-span-2">
               <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20">
@@ -580,8 +685,8 @@ const Dashboard = () => {
                           type="button"
                           onClick={() => handleStyleChange(style)}
                           className={`p-2 rounded-lg text-sm transition-colors ${formData.styles.includes(style)
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                             }`}
                         >
                           {style}
@@ -617,82 +722,79 @@ const Dashboard = () => {
               <h3 className="text-xl font-bold text-white">Portfolio</h3>
               {editMode && (
                 <p className="text-sm text-gray-400">
-                  Upload up to 3 images of your work
-                </p>
+                  Upload images of your work ({portfolioImages.length} uploaded)                </p>
               )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {[0, 1, 2].map((index) => (
-                <div key={index} className="relative group">
+              {/* תמונות קיימות */}
+              {portfolioImages.map((image) => (
+                <div key={image.id} className="relative group">
                   {editMode ? (
-                    <>
-                      {workImageUrls[index] ? (
-                        <div className="aspect-square rounded-lg overflow-hidden border-2 border-purple-500/30 relative">
-                          <img
-                            src={workImageUrls[index]}
-                            alt={`Work ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                            <button
-                              onClick={() => workImageRefs[index].current?.click()}
-                              className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-                            >
-                              <Upload className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                const newUrls = [...workImageUrls];
-                                newUrls[index] = null;
-                                setWorkImageUrls(newUrls);
-
-                                const newImages = [...workImages];
-                                newImages[index] = null;
-                                setWorkImages(newImages);
-                              }}
-                              className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => workImageRefs[index].current?.click()}
-                          className="aspect-square w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg hover:border-purple-500 transition-colors"
-                        >
-                          <Upload className="text-gray-400 mb-2" size={24} />
-                          <span className="text-sm text-gray-400">Upload Image</span>
-                        </button>
-                      )}
-
-                      <input
-                        type="file"
-                        ref={workImageRefs[index]}
-                        onChange={(e) => handleWorkImageChange(index, e)}
-                        accept="image/*"
-                        className="hidden"
+                    <div className="aspect-square rounded-lg overflow-hidden border-2 border-purple-500/30 relative">
+                      <img
+                        src={image.url}
+                        alt="Portfolio work"
+                        className="w-full h-full object-cover"
                       />
-                    </>
+                      {/* Badge for new images */}
+                      {image.isNew && (
+                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                          New
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => handleReplaceImage(image.id)}
+                          className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                        >
+                          <Upload className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveImage(image.id)}
+                          className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   ) : (
-                    workImageUrls[index] ? (
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-purple-500/30">
-                        <img
-                          src={workImageUrls[index]}
-                          alt={`Work ${index + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                      </div>
-                    ) : (
-                      <div className="aspect-square flex items-center justify-center border-2 border-dashed border-gray-800 rounded-lg bg-gray-800/30">
-                        <span className="text-gray-600">No image</span>
-                      </div>
-                    )
+                    <div className="aspect-square rounded-lg overflow-hidden border-2 border-purple-500/30">
+                      <img
+                        src={image.url}
+                        alt="Portfolio work"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                    </div>
                   )}
                 </div>
               ))}
+
+              {/* כפתור הוספת תמונה חדשה */}
+              {editMode && (
+                <div className="relative group">
+                  <button
+                    onClick={handleAddNewImage}
+                    className="aspect-square w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg hover:border-purple-500 transition-colors"
+                  >
+                    <Upload className="text-gray-400 mb-2" size={24} />
+                    <span className="text-sm text-gray-400">Add Images</span>
+                    <span className="text-xs text-gray-500 mt-1">
+                      {portfolioImages.length} uploaded
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* הודעה אם אין תמונות */}
+              {!editMode && portfolioImages.length === 0 && (
+                <div className="col-span-full flex items-center justify-center py-12 text-gray-500">
+                  <div className="text-center">
+                    <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No portfolio images uploaded yet</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -22,7 +23,7 @@ const MapUpdater = ({ center }) => {
 
 const formatAddress = (fullAddress) => {
   const parts = fullAddress.split(',');
-  
+ 
   const relevantParts = parts
     .map(part => part.trim())
     .filter(part => {
@@ -33,11 +34,16 @@ const formatAddress = (fullAddress) => {
       return true;
     })
     .slice(0, 3); // Keep only first 3 relevant parts
-    
+
   return relevantParts.join(', ');
 };
 
 const LocationSearch = ({ onLocationSelect, onClose }) => {
+  const { t, i18n } = useTranslation(); // עדכן את השורה הזאת
+    // useEffect כאן
+    useEffect(() => {
+      // Force re-render when language changes
+    }, [i18n.language]);
   const [searchQuery, setSearchQuery] = useState('');
   const [address, setAddress] = useState('');
   const [radius, setRadius] = useState(1.5);
@@ -48,7 +54,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
   const [markerPosition, setMarkerPosition] = useState([31.7767, 35.2345]);
   const searchTimeout = useRef(null);
 
-  const searchLocation = async (query) => {
+  const searchLocation = async (query) => { 
     if (!query.trim()) {
       setSearchResults([]);
       return;
@@ -98,7 +104,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
           const newPosition = [position.coords.latitude, position.coords.longitude];
           setMarkerPosition(newPosition);
           setMapCenter(newPosition);
-          
+
           try {
             const response = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
@@ -112,7 +118,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
             setAddress(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
             setSearchQuery(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
           }
-          
+
           setIsLoadingLocation(false);
         },
         (error) => {
@@ -137,7 +143,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
   const handleMapClick = async (e) => {
     const { lat, lng } = e.latlng;
     setMarkerPosition([lat, lng]);
-    
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
@@ -155,8 +161,10 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
 
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 w-[800px] shadow-lg">
-      <h3 className="text-white text-lg mb-4">Set your location</h3>
-      
+      <h3 className="text-white text-lg mb-4">{t('search.setLocation')}</h3>
+
+
+
       <div className="flex gap-4">
         {/* Map Section */}
         <div className="flex-1">
@@ -171,14 +179,14 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
-              <Marker 
+              <Marker
                 position={markerPosition}
                 eventHandlers={{
                   dragend: async (e) => {
                     const marker = e.target;
                     const position = marker.getLatLng();
                     setMarkerPosition([position.lat, position.lng]);
-                    
+
                     try {
                       const response = await fetch(
                         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`
@@ -215,7 +223,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchInputChange}
-                placeholder="Search location..."
+                placeholder={t('search.searchLocation')}
                 className="w-full pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-purple-500 border border-gray-600"
               />
               {isSearching ? (
@@ -224,7 +232,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
                 <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
               )}
             </div>
-            
+
             {/* Search Results Dropdown */}
             {searchResults.length > 0 && (
               <div className="absolute w-full mt-1 bg-gray-700 rounded-lg shadow-lg border border-gray-600 z-10">
@@ -252,13 +260,13 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
             ) : (
               <MapPin className="w-4 h-4" />
             )}
-            Current location
+            {t('search.currentLocation')}
           </button>
 
           {/* Radius Slider */}
           <div className="space-y-2">
             <label className="block text-sm text-gray-400">
-              Search radius: {radius} km
+            {t('search.searchRadius')}: {radius} km
             </label>
             <input
               type="range"
@@ -278,13 +286,15 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
           <button
             onClick={handleConfirm}
             disabled={!address}
-            className={`w-full py-2 rounded-lg ${
-              address
-                ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-            }`}
+            className={`w-full py-2 rounded-lg ${address
+              ? 'bg-purple-600 hover:bg-purple-700 text-white'
+              : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              }`}
           >
-            Confirm location
+            {t('search.confirmLocation')}
+
+
+
           </button>
         </div>
       </div>
