@@ -31,6 +31,10 @@
   --dl-radius-radius-buttonradius: 24px;
   --dl-space-space-oneandhalfunits: 24px;
 }
+
+html[lang="he"] {
+  font-family: 'Rubik', sans-serif !important;
+}
 .button {
   color: var(--dl-color-theme-neutral-dark);
   display: inline-block;

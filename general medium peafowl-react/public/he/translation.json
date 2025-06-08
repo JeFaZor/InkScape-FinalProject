@@ -1,7 +1,7 @@
 {
   "navbar": {
     "home": "בית",
-    "about": "אודות", 
+    "about": "אודות",
     "contact": "צור קשר",
     "search": "חיפוש",
     "signUp": "הירשם",
@@ -17,12 +17,13 @@
     "placeholder": "חפש מקעקע לפי שם או סגנון...",
     "style": "סגנון",
     "location": "מיקום",
-    "tags": "תגיות", 
-    "clearFilters": "נקה מסננים",
+    "tags": "תגיות",
+    "clearFilters": "ניקוי פילטרים",
     "searchArtists": "חפש מקעקעים",
     "searching": "מחפש...",
-    "aiImageAnalysis": "מצא מקעקעים באמצעות ניתוח תמונה בבינה מלאכותית",
-    "uploadDescription": "העלה תמונת קעקוע והבינה המלאכותית שלנו תנתח את הסגנון כדי למצוא מקעקעים המתמחים בעבודה דומה",
+    "aiImageAnalysis": " Ai מצא מקעקעים באמצעות ניתוח תמונה",
+    
+    "uploadDescription": "העלה תמונה של קעקוע, והמערכת שלנו תזהה את הסגנון ותמצא עבורך את המקעקעים שמתמחים בדיוק בסגנון הזה",
     "or": "או",
     "searchLocation": "חפש מיקום...",
     "currentLocation": "מיקום נוכחי",
@@ -47,19 +48,19 @@
       
     }
   },
-  "styles": {
+ "styles": {
     "traditional": "מסורתי",
-    "newSchool": "ניו סקול",
+    "newschool": "ניו סקול", 
     "japanese": "יפני",
     "fineline": "קווים דקים",
     "geometric": "גיאומטרי",
-    "microRealism": "מיקרו ריאליזם",
+    "microrealism": "מיקרו ריאליזם",
     "realism": "ריאליזם",
-    "dotWork": "נקודות",
-    "darkArt": "אמנות אפלה",
+    "dotwork": "נקודות",
+    "darkart": "אפל",
     "flowers": "פרחים",
     "surrealism": "סוריאליזם",
-    "trashPolka": "טראש פולקה"
+    "trashpolka": "טראש פולקה"
   },
   "tags": {
     "blackGrey": "שחור ואפור",
@@ -86,7 +87,35 @@
     "signIn": "התחבר",
     "processing": "מעבד...",
     "dontHaveAccount": "אין לך חשבון? הירשם",
-    "alreadyHaveAccount": "כבר יש לך חשבון? התחבר"
+    "alreadyHaveAccount": "כבר יש לך חשבון? התחבר",
+    "iAm": "אני",
+    "tattooArtist": "מקעקע",
+    "iOwnOrWorkAtATattooStudio": "אני בעלים או עובד בסטודיו קעקועים",
+    "lookingForAnArtist": "מחפש מקעקע",
+    "iWantToGetATattoo": "אני רוצה לעשות קעקוע",
+    "chooseAPassword": "בחר סיסמה",
+    "studioLocation": "מיקום הסטודיו",
+    "searchLocation": "חפש מיקום...",
+    "useMyCurrentLocation": "השתמש במיקום הנוכחי שלי",
+    "profileImage": "תמונת פרופיל",
+    "addAProfileImage": "הוסף תמונת פרופיל",
+    "thisWillBeDisplayedOnYourProfile": "זה יוצג בפרופיל שלך",
+    "uploadYourWork": "העלה את העבודות שלך",
+    "theseImagesWillBeDisplayedInYourArtistProfile": "התמונות האלה יוצגו בפרופיל המקעקע שלך",
+    "tattooStyles": "סגנונות קעקוע",
+    "instagramHandle": "כתובת אינסטגרם",
+    "bio": "תיאור עצמי",
+    "tellClientsAboutYourselfAndYourWork": "ספר ללקוחות על עצמך ועל העבודה שלך",
+    "lookingForTattoo": "אני מחפש קעקוע",
+     "continueWithInstagram": "התחבר באמצעות אינסטגרם",
+    "continueWithGoogle": "`התחבר באמצעות גוגל`",
+    "termsAgreement": "בהרשמה אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו",
+    "byCreatingAccount": "ביצירת חשבון, אתה מסכים ל",
+    "termsOfService": "תנאי השירות",
+    "privacyPolicy": "מדיניות הפרטיות", 
+    "and": "ו"
+
+
   },
   "common": {
     "loading": "טוען...",
@@ -98,5 +127,64 @@
     "close": "סגור",
     "remove": "הסר",
     "upload": "העלה"
+  },
+  "dashboard": {
+    "myProfile": "הפרופיל שלי",
+    "manageProfile": "נהל את הפרופיל המקצועי שלך",
+    "profile": "פרופיל",
+    "portfolio": "תיק עבודות",
+    "statistics": "סטטיסטיקות",
+    "editProfile": "ערוך פרופיל",
+    "saveChanges": "שמור שינויים",
+    "cancel": "ביטול",
+    "saving": "שומר...",
+    "professionalInfo": "מידע מקצועי",
+    "bio": "תיאור",
+    "noBio": "לא סופק תיאור",
+    "location": "מיקום",
+    "noLocation": "לא צוין מיקום",
+    "tattooStyles": "סגנונות קעקוע",
+    "noStyles": "לא נבחרו סגנונות",
+    "profileViews": "צפיות בפרופיל",
+    "messages": "הודעות",
+    "reviews": "ביקורות",
+    "averageRating": "דירוג ממוצע",
+    "profileCompletion": "השלמת פרופיל",
+    "completeProfileDesc": "השלם את הפרופיל שלך כדי לקבל יותר נראות בתוצאות החיפוש",
+    "noStylesSelected": "לא נבחרו סגנונות",
+    "completeProfile": "השלם פרופיל",
+    "styles": {
+      "Traditional": "מסורתי",
+      "New School": "ניו סקול",
+      "Japanese": "יפני",
+      "Fineline": "קווים דקים",
+      "Geometric": "גיאומטרי",
+      "Micro Realism": "מיקרו ריאליזם",
+      "Realism": "ריאליזם",
+      "Dot Work": "נקודות",
+      "Dark Art": "אמנות אפלה",
+      "Flowers": "פרחים",
+      "Surrealism": "סוריאליזם",
+      "Trash Polka": "טראש פולקה"
+    }
+
+  },
+  
+  "imageProcessing": {
+    "aiStyleAnalysis": "ניתוח סגנון AI",
+    "analyzing": "מנתח תמונה...",
+    "detectingStyle": "מזהה סגנון קעקוע...",
+    "identifyingElements": "מזהה אלמנטים מרכזיים...",
+    "matchingArtists": "מתאים עם מקעקעים...",
+    "finalizingResults": "משלים תוצאות...",
+    "pleaseWait": "ה-AI שלנו מנתח את הקעקוע שלך כדי למצוא מקעקעים מתאימים. אנא המתן...",
+    "loadingGenres": "טוען סגנונות...",
+    "findArtistsAI": "מצא מקעקעים באמצעות ניתוח תמונה בבינה מלאכותית"
+  },
+  "artistCard": {
+    "contact": "צור קשר",
+    "verified": "מאומת",
+    "away": "ק״מ משם",
+    "loadingLocation": "טוען מיקום..."
   }
 }

@@ -1,10 +1,11 @@
 import React, { Fragment, useEffect } from 'react'
 import { useHistory } from 'react-router-dom';
-import { useTranslation } from 'react-i18next'; // הוספה חדשה
+import { useTranslation } from 'react-i18next';
 import SearchSection from './SearchSection'
 
 import Script from 'dangerous-html/react'
 import PropTypes from 'prop-types'
+// Import images for gallery section
 import image1 from './assets/img1.jpg';
 import image2 from './assets/img2.jpg';
 import image3 from './assets/img3.jpg';
@@ -18,6 +19,7 @@ import image10 from './assets/img10.jpg';
 import image11 from './assets/img11.jpg';
 import image12 from './assets/img12.jpg';
 
+// Import tattoo style images
 import traditional from './assets/tat1.jpg';
 import newSchool from './assets/tat2.png';
 import anime from './assets/tat3.png';
@@ -35,21 +37,15 @@ import './hero17.css'
 
 const Hero17 = (props) => {
   const history = useHistory();
-  const { t, i18n } = useTranslation(); // עדכן את השורה הזאת
+  const { t, i18n } = useTranslation();
 
-
-  // useEffect כאן
   useEffect(() => {
     // Force re-render when language changes
   }, [i18n.language]);
 
-
-
-
   const handleClick = () => {
     history.push('/get-started');
   };
-
 
   return (
     <div className="hero17-header78" style={{ padding: '0' }}>
@@ -230,48 +226,7 @@ const Hero17 = (props) => {
   )
 }
 
-Hero17.defaultProps = {
-  image10Alt: 'Hero Image',
-  image11Src:
-    'https://images.unsplash.com/photo-1573496546735-c274b1fd186b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OHw&ixlib=rb-4.0.3&q=80&w=1080',
-  image12Alt: 'Hero Image',
-  image4Src:
-    'https://images.unsplash.com/photo-1472289065668-ce650ac443d2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzQwMHw&ixlib=rb-4.0.3&q=80&w=1080',
-  image7Alt: 'Hero Image',
-  action1: undefined,
-  image3Src:
-    'https://images.unsplash.com/photo-1564933983845-b9c52e170500?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5N3w&ixlib=rb-4.0.3&q=80&w=1080',
-  action2: undefined,
-  image9Alt: 'Hero Image',
-  image11Alt: 'Hero Image',
-  image12Src:
-    'https://images.unsplash.com/photo-1635425542915-6da07160887c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OXw&ixlib=rb-4.0.3&q=80&w=1080',
-  content1: undefined,
-  image8Src:
-    'https://images.unsplash.com/photo-1508970566-7e0cca18e5d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OXw&ixlib=rb-4.0.3&q=80&w=1080',
-  image6Src:
-    'https://images.unsplash.com/photo-1535119512-9e6a24a532c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OHw&ixlib=rb-4.0.3&q=80&w=1080',
-  image10Src:
-    'https://images.unsplash.com/photo-1501556424050-d4816356b73e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzQwMHw&ixlib=rb-4.0.3&q=80&w=1080',
-  image3Alt: 'Hero Image',
-  image7Src:
-    'https://images.unsplash.com/photo-1487700160041-babef9c3cb55?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OHw&ixlib=rb-4.0.3&q=80&w=1080',
-  image5Alt: 'Hero Image',
-  image2Alt: 'Tattoo Artist Search Bar',
-  image9Src:
-    'https://images.unsplash.com/photo-1712246754649-119c1cef4a43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OXw&ixlib=rb-4.0.3&q=80&w=1080',
-  image6Alt: 'Hero Image',
-  image5Src:
-    'https://images.unsplash.com/45/eDLHCtzRR0yfFtU0BQar_sylwiabartyzel_themap.jpg?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OXw&ixlib=rb-4.0.3&q=80&w=1080',
-  image1Src:
-    'https://images.unsplash.com/photo-1598449935381-54511437c927?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzQwMXw&ixlib=rb-4.0.3&q=80&w=1080',
-  image8Alt: 'Hero Image',
-  image1Alt: 'Tattoo Artist Map',
-  image2Src:
-    'https://images.unsplash.com/photo-1551385917-889e48f92c21?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTMyMXwwfDF8cmFuZG9tfHx8fHx8fHx8MTcyNDg4MzM5OHw&ixlib=rb-4.0.3&q=80&w=1080',
-  heading1: undefined,
-  image4Alt: 'Hero Image',
-}
+
 
 Hero17.propTypes = {
   image10Alt: PropTypes.string,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabaseClient';
 import {
   User,
@@ -14,7 +16,40 @@ import {
   Star
 } from 'lucide-react';
 
-// Style ID mapping - same as in other components
+// Helper function to get location in current language
+const getLocationInCurrentLanguage = async (coordinates, language) => {
+  if (!coordinates || !coordinates.includes(',')) {
+    return coordinates;
+  }
+
+  try {
+    const cleanCoordinates = coordinates.replace(/[()]/g, '');
+    const [lat, lng] = cleanCoordinates.split(',').map(coord => parseFloat(coord.trim()));
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${language}&addressdetails=1&zoom=18`
+    );
+
+    const data = await response.json();
+
+    if (data && data.display_name) {
+      const parts = data.display_name.split(',');
+      const relevantParts = parts
+        .slice(0, 3)
+        .map(part => part.trim())
+        .filter(part => part && !/^\d+$/.test(part));
+
+      return relevantParts.join(', ');
+    }
+
+    return coordinates;
+  } catch (error) {
+    console.error('Error getting location:', error);
+    return coordinates;
+  }
+};
+
+// Style ID mapping for tattoo styles
 const styleNameToIdMap = {
   'Traditional': 1,
   'New School': 2,
@@ -36,6 +71,13 @@ const styleIdToNameMap = Object.fromEntries(
 );
 
 const Dashboard = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'he';
+
+  useEffect(() => {
+    // Force re-render when language changes
+  }, [i18n.language]);
+
   const { user, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,7 +98,10 @@ const Dashboard = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [portfolioImages, setPortfolioImages] = useState([]);
-  // כל אובייקט יכיל: { id: unique_id, url: string, file: File|null, isNew: boolean }
+  const [displayLocation, setDisplayLocation] = useState('');
+  const [editableLocation, setEditableLocation] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
   // References for file inputs
   const profileImageRef = React.useRef(null);
@@ -72,11 +117,11 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchArtistProfile = async () => {
       if (!user) return;
+      if (document.visibilityState !== 'visible') return;
 
       try {
         setLoading(true);
 
-        // Fetch user's artist profile
         const { data: profileData, error: profileError } = await supabase
           .from('artist_profiles')
           .select('*')
@@ -88,7 +133,6 @@ const Dashboard = () => {
           throw profileError;
         }
 
-        // Fetch artist's styles
         let artistStyles = [];
         if (profileData && profileData.id) {
           const { data: stylesData, error: stylesError } = await supabase
@@ -97,32 +141,27 @@ const Dashboard = () => {
             .eq('artist_id', profileData.id);
 
           if (!stylesError && stylesData) {
-            // Convert style IDs to names using our mapping
             artistStyles = stylesData
               .map(item => styleIdToNameMap[item.style_id])
-              .filter(Boolean); // Remove any undefined values
+              .filter(Boolean);
           }
         }
 
-        // Set artist profile data
         setArtistProfile(profileData || null);
 
-        // Set form data
         setFormData({
           firstName: user.first_name || '',
           lastName: user.last_name || '',
           bio: profileData?.bio || '',
           instagram: profileData?.instagram_handle || '',
-          location: profileData?.service_area || '',
+          location: profileData?.location || '', 
           styles: artistStyles
         });
 
-        // Set profile image URL
         if (profileData?.profile_image_url) {
           setProfileImageUrl(profileData.profile_image_url);
         }
 
-        // Set portfolio images from database
         if (profileData?.recent_works_urls && Array.isArray(profileData.recent_works_urls)) {
           const existingImages = profileData.recent_works_urls.map((url, index) => ({
             id: `existing_${index}`,
@@ -142,6 +181,82 @@ const Dashboard = () => {
     fetchArtistProfile();
   }, [user]);
 
+  useEffect(() => {
+    const updateLocation = async () => {
+      if (formData.location) {
+        const currentLang = i18n.language === 'he' ? 'he' : 'en';
+        const locationText = await getLocationInCurrentLanguage(formData.location, currentLang);
+        setDisplayLocation(locationText);
+      }
+    };
+  
+    updateLocation();
+  }, [formData.location, i18n.language]);
+
+  // Search for location suggestions
+  const searchLocationSuggestions = async (query) => {
+    if (!query.trim() || query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    setIsSearchingLocation(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' Israel')}&limit=5`
+      );
+      const data = await response.json();
+      setLocationSuggestions(data);
+    } catch (error) {
+      console.error('Error searching location:', error);
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  // Convert address to coordinates
+  const geocodeAddress = async (address) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ' Israel')}&limit=1`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        return `${lat},${lon}`;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error geocoding address:', error);
+      return null;
+    }
+  };
+
+  // Handle location input change with debounced search
+  const handleLocationInputChange = (e) => {
+    const value = e.target.value;
+    setEditableLocation(value);
+
+    // Debounce search
+    clearTimeout(window.locationSearchTimeout);
+    window.locationSearchTimeout = setTimeout(() => {
+      searchLocationSuggestions(value);
+    }, 300);
+  };
+
+  // Handle location suggestion selection
+  const handleLocationSuggestionSelect = (suggestion) => {
+    const newPosition = [parseFloat(suggestion.lat), parseFloat(suggestion.lon)];
+    const formattedAddress = suggestion.display_name.split(',').slice(0, 3).join(', ');
+
+    setEditableLocation(formattedAddress);
+    setFormData(prev => ({
+      ...prev,
+      location: `${newPosition[0]},${newPosition[1]}`
+    }));
+    setLocationSuggestions([]);
+  };
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -262,7 +377,6 @@ const Dashboard = () => {
     try {
       setSaving(true);
 
-      // Upload profile image if changed
       let profileImageUrlToSave = profileImageUrl;
       if (profileImage) {
         const uploadedUrl = await uploadImage(profileImage);
@@ -271,23 +385,26 @@ const Dashboard = () => {
         }
       }
 
-      // Upload new images and prepare URLs array
       const workImageUrlsToSave = [];
 
       for (const image of portfolioImages) {
         if (image.isNew && image.file) {
-          // Upload new file
           const uploadedUrl = await uploadImage(image.file);
           if (uploadedUrl) {
             workImageUrlsToSave.push(uploadedUrl);
           }
         } else if (!image.isNew && image.url) {
-          // Keep existing URL
           workImageUrlsToSave.push(image.url);
         }
       }
+      let coordinatesToSave = formData.location;
+      if (editMode && editableLocation && editableLocation !== displayLocation) {
+        const newCoordinates = await geocodeAddress(editableLocation);
+        if (newCoordinates) {
+          coordinatesToSave = newCoordinates;
+        }
+      }
 
-      // Update user data (first_name, last_name)
       const { error: userUpdateError } = await supabase
         .from('users')
         .update({
@@ -298,18 +415,16 @@ const Dashboard = () => {
 
       if (userUpdateError) throw userUpdateError;
 
-      // Check if artist profile exists
       let artistId = artistProfile?.id;
 
       if (!artistProfile) {
-        // Create new artist profile
         const { data: newProfile, error: createError } = await supabase
           .from('artist_profiles')
           .insert({
             user_id: user.id,
             bio: formData.bio,
             instagram_handle: formData.instagram,
-            service_area: formData.location,
+            location: coordinatesToSave,
             profile_image_url: profileImageUrlToSave,
             recent_works_urls: workImageUrlsToSave.filter(Boolean),
             avg_rating: 0,
@@ -323,13 +438,12 @@ const Dashboard = () => {
         artistId = newProfile[0].id;
         setArtistProfile(newProfile[0]);
       } else {
-        // Update existing artist profile
         const { error: updateError } = await supabase
           .from('artist_profiles')
           .update({
             bio: formData.bio,
             instagram_handle: formData.instagram,
-            service_area: formData.location,
+            location: coordinatesToSave,
             profile_image_url: profileImageUrlToSave,
             recent_works_urls: workImageUrlsToSave.filter(Boolean)
           })
@@ -338,11 +452,7 @@ const Dashboard = () => {
         if (updateError) throw updateError;
       }
 
-      // Handle styles using hardcoded mapping
       if (artistId) {
-        // Clear existing styles
-        // Clear existing styles
-        console.log('Clearing existing styles for artist ID:', artistId);
         const { error: deleteError } = await supabase
           .from('styles_artists')
           .delete()
@@ -353,7 +463,6 @@ const Dashboard = () => {
           throw deleteError;
         }
 
-        // Add selected styles using our mapping
         if (formData.styles.length > 0) {
           const styleAssociations = formData.styles
             .map(styleName => {
@@ -368,7 +477,7 @@ const Dashboard = () => {
               }
               return null;
             })
-            .filter(Boolean); // Remove any null values
+            .filter(Boolean);
 
           if (styleAssociations.length > 0) {
             const { error: stylesError } = await supabase
@@ -377,27 +486,16 @@ const Dashboard = () => {
 
             if (stylesError) {
               console.error('Error saving styles:', stylesError);
-              console.error('Full error object:', JSON.stringify(stylesError, null, 2));
-              console.error('Error message:', stylesError.message);
-              console.error('Error code:', stylesError.code);
-              console.error('Error details:', stylesError.details);
-              console.error('Style associations that failed:', styleAssociations);
-              console.error('Artist ID:', artistId);
-              console.error('Form data styles:', formData.styles);
               throw stylesError;
             }
           }
         }
       }
 
-      // Reset file states after successful save
       setProfileImage(null);
-      // Update portfolio images to mark all as saved (not new)
       setPortfolioImages(prev => prev.map(img => ({ ...img, file: null, isNew: false })));
-      // Turn off edit mode
       setEditMode(false);
 
-      // Show success message
       alert('Profile updated successfully!');
 
     } catch (error) {
@@ -410,7 +508,7 @@ const Dashboard = () => {
 
   // Helper function to calculate profile completion percentage
   const calculateCompletionPercentage = () => {
-    let totalFields = 7; // Total number of fields to check
+    let totalFields = 7;
     let completedFields = 0;
 
     if (formData.firstName) completedFields++;
@@ -423,6 +521,12 @@ const Dashboard = () => {
 
     return Math.floor((completedFields / totalFields) * 100);
   };
+  const translateStyle = (style) => {
+    if (isRTL) {
+      return t(`dashboard.styles.${style}`) || style;
+    }
+    return style;
+  };
 
   if (loading) {
     return (
@@ -433,45 +537,43 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-150/15 via-black to-black -mt-8">
-
-
+    <div className={`min-h-screen bg-black bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-150/15 via-black to-black -mt-8 ${isRTL ? 'dashboard-container' : ''}`}>
       {/* Main Content */}
       <main className="container mx-auto py-8 px-4">
         {/* Dashboard Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div className={`flex flex-col md:flex-row md:items-center md:justify-between mb-8 ${isRTL ? 'dashboard-content' : ''}`}>
           <div className="mb-4 md:mb-0">
-            <h2 className="text-3xl font-bold text-white">My Profile</h2>
-            <p className="text-gray-400 mt-1">Manage your professional profile</p>
+            <h2 className={`text-3xl font-bold text-white ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.myProfile')}</h2>
+            <p className={`text-gray-400 mt-1 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.manageProfile')}</p>
           </div>
 
-          <div className="flex space-x-3">
+          <div className={`flex space-x-3 ${isRTL ? 'dashboard-flex-reverse space-x-reverse' : ''}`}>
             {editMode ? (
               <>
                 <button
                   onClick={saveProfile}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 transition-colors"
+                  className={`px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 transition-colors ${isRTL ? 'btn-with-icon' : ''}`}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? t('dashboard.saving') : t('dashboard.saveChanges')}
                 </button>
                 <button
                   onClick={() => setEditMode(false)}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors"
+                  className={`px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors ${isRTL ? 'btn-with-icon' : ''}`}
                 >
                   <X className="w-4 h-4" />
-                  Cancel
+                  {t('dashboard.cancel')}
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setEditMode(true)}
-                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 transition-colors"
+                className={`px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 transition-colors ${isRTL ? 'btn-with-icon' : ''}`}
               >
                 <Edit className="w-4 h-4" />
-                Edit Profile
+                {t('dashboard.editProfile')}
               </button>
             )}
           </div>
@@ -479,7 +581,7 @@ const Dashboard = () => {
 
         {/* Dashboard Tabs */}
         <div className="mb-6 border-b border-gray-800">
-          <div className="flex space-x-4">
+          <div className={`flex space-x-4 ${isRTL ? '' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
             <button
               onClick={() => setActiveTab('profile')}
               className={`py-2 px-4 text-white relative ${activeTab === 'profile'
@@ -487,7 +589,7 @@ const Dashboard = () => {
                 : 'text-gray-400 hover:text-gray-200'
                 }`}
             >
-              Profile
+              {t('dashboard.profile')}
             </button>
             <button
               onClick={() => setActiveTab('portfolio')}
@@ -496,7 +598,7 @@ const Dashboard = () => {
                 : 'text-gray-400 hover:text-gray-200'
                 }`}
             >
-              Portfolio
+              {t('dashboard.portfolio')}
             </button>
             <button
               onClick={() => setActiveTab('stats')}
@@ -505,17 +607,17 @@ const Dashboard = () => {
                 : 'text-gray-400 hover:text-gray-200'
                 }`}
             >
-              Statistics
+              {t('dashboard.statistics')}
             </button>
           </div>
         </div>
 
         {/* Profile Tab */}
         {activeTab === 'profile' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 ${isRTL ? 'dashboard-grid' : ''}`}>
             {/* Left Column - Profile Image */}
             <div className="md:col-span-1">
-              <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20">
+              <div className={`bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20 h-full ${isRTL ? 'dashboard-profile-section' : ''}`}>
                 <div className="flex flex-col items-center space-y-4">
                   {/* Profile Image */}
                   <div className="relative">
@@ -527,20 +629,13 @@ const Dashboard = () => {
                       />
                     </div>
 
-                    {/* כפתור הוספת תמונה חדשה */}
                     {editMode && (
-                      <div className="relative group">
-                        <button
-                          onClick={handleAddImageSlot}
-                          className="aspect-square w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg hover:border-purple-500 transition-colors"
-                        >
-                          <Upload className="text-gray-400 mb-2" size={24} />
-                          <span className="text-sm text-gray-400">Add Image</span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            {workImageUrls.length} images
-                          </span>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => profileImageRef.current?.click()}
+                        className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full text-white hover:bg-purple-700 transition-colors"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </button>
                     )}
 
                     <input
@@ -560,20 +655,20 @@ const Dashboard = () => {
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleInputChange}
-                        placeholder="First Name"
-                        className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 text-center"
+                        placeholder={isRTL ? "First Name" : "First Name"}
+                        className={`w-full bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 text-center ${isRTL ? 'dashboard-form-input' : ''}`}
                       />
                       <input
                         type="text"
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleInputChange}
-                        placeholder="Last Name"
-                        className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 text-center"
+                        placeholder={isRTL ? "Last Name" : "Last Name"}
+                        className={`w-full bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 text-center ${isRTL ? 'dashboard-form-input' : ''}`}
                       />
                     </div>
                   ) : (
-                    <h3 className="text-xl font-bold text-white text-center">
+                    <h3 className={`text-xl font-bold text-white text-center ${isRTL ? 'dashboard-text-right' : ''}`}>
                       {formData.firstName} {formData.lastName}
                     </h3>
                   )}
@@ -581,13 +676,13 @@ const Dashboard = () => {
                   {/* Verification Status */}
                   {artistProfile?.is_verified && (
                     <div className="flex items-center gap-1 text-green-400 text-sm">
-                      <span className="text-xs px-2 py-0.5 bg-green-500/20 rounded-full">Verified</span>
+                      <span className="text-xs px-2 py-0.5 bg-green-500/20 rounded-full">{t('dashboard.verified')}</span>
                     </div>
                   )}
 
                   {/* Rating */}
                   {artistProfile && (
-                    <div className="flex items-center space-x-1">
+                    <div className={`flex items-center space-x-1 ${isRTL ? 'rating-display' : ''}`}>
                       <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                       <span className="text-white font-medium">
                         {artistProfile.avg_rating ? artistProfile.avg_rating.toFixed(1) : '0.0'}
@@ -604,9 +699,9 @@ const Dashboard = () => {
                         value={formData.instagram}
                         onChange={handleInputChange}
                         placeholder="Instagram Username"
-                        className="w-full bg-gray-800 text-white rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700"
+                        className={`w-full bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 instagram-handle ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'}`}
                       />
-                      <Instagram className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                      <Instagram className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-2.5 text-gray-400`} size={16} />
                     </div>
                   ) : (
                     formData.instagram && (
@@ -614,7 +709,7 @@ const Dashboard = () => {
                         href={`https://instagram.com/${formData.instagram}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
+                        className={`flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors instagram-handle ${isRTL ? 'flex-row-reverse' : ''}`}
                       >
                         <Instagram className="w-4 h-4" />
                         <span>@{formData.instagram}</span>
@@ -627,48 +722,71 @@ const Dashboard = () => {
 
             {/* Right Column - Profile Details */}
             <div className="md:col-span-2">
-              <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20">
-                <h3 className="text-xl font-bold text-white mb-4">Professional Info</h3>
+              <div
+                className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20"
+                dir={isRTL ? 'rtl' : 'ltr'}
+              >
+                <h3 className={`text-xl font-bold text-white mb-4 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.professionalInfo')}</h3>
 
                 {/* Bio */}
                 <div className="mb-6">
-                  <label className="block text-gray-300 text-sm mb-2">Bio</label>
+                  <label className={`block text-gray-300 text-sm mb-2 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.bio')}</label>
                   {editMode ? (
                     <textarea
                       name="bio"
                       value={formData.bio}
                       onChange={handleInputChange}
                       rows={5}
-                      className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700"
-                      placeholder="Describe your experience and tattooing style..."
+                      className={`w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 ${isRTL ? 'dashboard-form-input' : ''}`}
+                      placeholder={t('dashboard.bioPlaceholder')}
                     />
                   ) : (
-                    <p className="text-gray-300 whitespace-pre-wrap">
-                      {formData.bio || 'No bio provided'}
+                    <p className={`text-gray-300 whitespace-pre-wrap ${isRTL ? 'text-content' : ''}`}>
+                      {formData.bio || t('dashboard.noBio')}
                     </p>
                   )}
                 </div>
 
                 {/* Location */}
-                <div className="mb-6">
-                  <label className="block text-gray-300 text-sm mb-2">Location</label>
+                <div className="mb-6" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <label className={`block text-gray-300 text-sm mb-2 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.location')}</label>
                   {editMode ? (
                     <div className="relative">
                       <input
                         type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        className="w-full bg-gray-800 text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700"
-                        placeholder="Enter your studio location"
+                        value={editableLocation}
+                        onChange={handleLocationInputChange}
+                        className={`w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 ${isRTL ? 'dashboard-form-input pr-10 pl-4' : 'pl-10 pr-4'}`}
+                        placeholder={isRTL ? "Enter studio address" : "Enter studio address"}
                       />
-                      <MapPin className="absolute left-3 top-3 text-gray-400" size={20} />
+                      <MapPin className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 text-gray-400`} size={20} />
+
+                      {/* Location suggestions dropdown */}
+                      {locationSuggestions.length > 0 && (
+                        <div className="absolute w-full mt-1 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-10 max-h-60 overflow-y-auto">
+                          {locationSuggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleLocationSuggestionSelect(suggestion)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg"
+                            >
+                              {suggestion.display_name.split(',').slice(0, 3).join(', ')}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {isSearchingLocation && (
+                        <div className={`absolute ${isRTL ? 'left-3' : 'right-3'} top-3`}>
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-5 h-5 text-purple-400 mt-0.5" />
-                      <span className="text-gray-300">
-                        {formData.location || 'No location specified'}
+                    <div className={`${isRTL ? 'text-right' : 'text-left'}`} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+                      <MapPin className={`w-5 h-5 text-purple-400 ${isRTL ? 'float-right ml-2' : 'float-left mr-2'}`} style={{ marginTop: '2px' }} />
+                      <span className={`text-gray-300 ${isRTL ? 'text-content' : ''}`}>
+                        {displayLocation || t('dashboard.noLocation')}
                       </span>
                     </div>
                   )}
@@ -676,9 +794,9 @@ const Dashboard = () => {
 
                 {/* Tattoo Styles */}
                 <div>
-                  <label className="block text-gray-300 text-sm mb-3">Tattoo Styles</label>
+                  <label className={`block text-gray-300 text-sm mb-3 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.tattooStyles')}</label>
                   {editMode ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${isRTL ? 'grid-rtl' : ''}`}>
                       {tattooStyles.map((style) => (
                         <button
                           key={style}
@@ -689,23 +807,27 @@ const Dashboard = () => {
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                             }`}
                         >
-                          {style}
+                          {translateStyle(style)}
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div
+                      className="flex flex-wrap gap-2"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                      style={isRTL ? { justifyContent: 'flex-start' } : {}}
+                    >
                       {formData.styles.length > 0 ? (
                         formData.styles.map((style) => (
                           <span
                             key={style}
                             className="px-3 py-1 rounded-full text-xs bg-purple-900/50 text-purple-200 border border-purple-500/50"
                           >
-                            {style}
+                            {translateStyle(style)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-gray-400">No styles selected</span>
+                        <span className={`text-gray-400 ${isRTL ? 'text-content' : ''}`}>{t('dashboard.noStyles')}</span>
                       )}
                     </div>
                   )}
@@ -717,17 +839,18 @@ const Dashboard = () => {
 
         {/* Portfolio Tab */}
         {activeTab === 'portfolio' && (
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Portfolio</h3>
+          <div className={`bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20 ${isRTL ? 'dashboard-content' : ''}`}>
+            <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <h3 className={`text-xl font-bold text-white ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.portfolio')}</h3>
               {editMode && (
-                <p className="text-sm text-gray-400">
-                  Upload images of your work ({portfolioImages.length} uploaded)                </p>
+                <p className={`text-sm text-gray-400 ${isRTL ? 'dashboard-text-right' : ''}`}>
+                  {t('dashboard.portfolioDesc')} ({portfolioImages.length} {t('dashboard.uploaded')})
+                </p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {/* תמונות קיימות */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 ${isRTL ? 'dashboard-portfolio-grid' : ''}`}>
+              {/* Existing images */}
               {portfolioImages.map((image) => (
                 <div key={image.id} className="relative group">
                   {editMode ? (
@@ -737,10 +860,10 @@ const Dashboard = () => {
                         alt="Portfolio work"
                         className="w-full h-full object-cover"
                       />
-                      {/* Badge for new images */}
+                      {/* New image badge */}
                       {image.isNew && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                          New
+                        <div className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} bg-green-500 text-white text-xs px-2 py-1 rounded-full`}>
+                          {t('dashboard.new')}
                         </div>
                       )}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
@@ -770,7 +893,7 @@ const Dashboard = () => {
                 </div>
               ))}
 
-              {/* כפתור הוספת תמונה חדשה */}
+              {/* Add new image button */}
               {editMode && (
                 <div className="relative group">
                   <button
@@ -778,20 +901,20 @@ const Dashboard = () => {
                     className="aspect-square w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg hover:border-purple-500 transition-colors"
                   >
                     <Upload className="text-gray-400 mb-2" size={24} />
-                    <span className="text-sm text-gray-400">Add Images</span>
+                    <span className="text-sm text-gray-400">{t('dashboard.addImages') || 'Add Images'}</span>
                     <span className="text-xs text-gray-500 mt-1">
-                      {portfolioImages.length} uploaded
+                      {portfolioImages.length} {t('dashboard.uploaded')}
                     </span>
                   </button>
                 </div>
               )}
 
-              {/* הודעה אם אין תמונות */}
+              {/* No images message */}
               {!editMode && portfolioImages.length === 0 && (
                 <div className="col-span-full flex items-center justify-center py-12 text-gray-500">
-                  <div className="text-center">
+                  <div className={`text-center ${isRTL ? 'text-content' : ''}`}>
                     <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No portfolio images uploaded yet</p>
+                    <p>{t('dashboard.noPortfolioImages')}</p>
                   </div>
                 </div>
               )}
@@ -801,29 +924,29 @@ const Dashboard = () => {
 
         {/* Stats Tab */}
         {activeTab === 'stats' && (
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20">
-            <h3 className="text-xl font-bold text-white mb-6">Statistics</h3>
+          <div className={`bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20 ${isRTL ? 'dashboard-content' : ''}`}>
+            <h3 className={`text-xl font-bold text-white mb-6 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.statistics')}</h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-purple-600/10">
-                <h4 className="text-gray-400 text-sm mb-1">Profile Views</h4>
-                <p className="text-3xl font-bold text-white">0</p>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 ${isRTL ? 'dashboard-stats-grid' : ''}`}>
+              <div className={`bg-gray-800/50 rounded-xl p-4 border border-purple-600/10 ${isRTL ? 'text-content' : ''}`}>
+                <h4 className={`text-gray-400 text-sm mb-1 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.profileViews')}</h4>
+                <p className={`text-3xl font-bold text-white ${isRTL ? 'dashboard-text-right' : ''}`}>0</p>
               </div>
 
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-purple-600/10">
-                <h4 className="text-gray-400 text-sm mb-1">Messages</h4>
-                <p className="text-3xl font-bold text-white">0</p>
+              <div className={`bg-gray-800/50 rounded-xl p-4 border border-purple-600/10 ${isRTL ? 'text-content' : ''}`}>
+                <h4 className={`text-gray-400 text-sm mb-1 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.messages')}</h4>
+                <p className={`text-3xl font-bold text-white ${isRTL ? 'dashboard-text-right' : ''}`}>0</p>
               </div>
 
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-purple-600/10">
-                <h4 className="text-gray-400 text-sm mb-1">Reviews</h4>
-                <p className="text-3xl font-bold text-white">0</p>
+              <div className={`bg-gray-800/50 rounded-xl p-4 border border-purple-600/10 ${isRTL ? 'text-content' : ''}`}>
+                <h4 className={`text-gray-400 text-sm mb-1 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.reviews')}</h4>
+                <p className={`text-3xl font-bold text-white ${isRTL ? 'dashboard-text-right' : ''}`}>0</p>
               </div>
 
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-purple-600/10">
-                <h4 className="text-gray-400 text-sm mb-1">Average Rating</h4>
-                <div className="flex items-center">
-                  <p className="text-3xl font-bold text-white mr-2">
+              <div className={`bg-gray-800/50 rounded-xl p-4 border border-purple-600/10 ${isRTL ? 'text-content' : ''}`}>
+                <h4 className={`text-gray-400 text-sm mb-1 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.averageRating')}</h4>
+                <div className={`flex items-center ${isRTL ? 'rating-display' : ''}`}>
+                  <p className={`text-3xl font-bold text-white ${isRTL ? 'ml-2' : 'mr-2'}`}>
                     {artistProfile?.avg_rating ? artistProfile.avg_rating.toFixed(1) : '0.0'}
                   </p>
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -831,11 +954,11 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="text-center py-10">
-              <h4 className="text-lg font-medium text-white mb-3">Profile Completion</h4>
+            <div className={`text-center py-10 ${isRTL ? 'text-content' : ''}`}>
+              <h4 className={`text-lg font-medium text-white mb-3 ${isRTL ? 'dashboard-text-right' : ''}`}>{t('dashboard.profileCompletion')}</h4>
 
-              {/* Simple progress bar */}
-              <div className="w-full bg-gray-800 rounded-full h-2.5 mb-4">
+              {/* Progress bar */}
+              <div className={`w-full bg-gray-800 rounded-full h-2.5 mb-4 ${isRTL ? 'progress-container' : ''}`}>
                 <div
                   className="bg-purple-600 h-2.5 rounded-full"
                   style={{
@@ -844,16 +967,16 @@ const Dashboard = () => {
                 ></div>
               </div>
 
-              <p className="text-gray-400 text-sm">
-                Complete your profile to get more visibility in search results
+              <p className={`text-gray-400 text-sm ${isRTL ? 'dashboard-text-right' : ''}`}>
+                {t('dashboard.completeProfileDesc')}
               </p>
 
               {!editMode && (
                 <button
                   onClick={() => setEditMode(true)}
-                  className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  className={`mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors ${isRTL ? 'btn-with-icon' : ''}`}
                 >
-                  Complete Profile
+                  {t('dashboard.completeProfile')}
                 </button>
               )}
             </div>

@@ -12,11 +12,10 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
     "Finalizing results..."
   ];
   
-  // Progress bar and phase animation
   useEffect(() => {
     if (!isVisible) return;
     
-    const increment = 100 / (processingTime * 10); // Update 10 times per second
+    const increment = 100 / (processingTime * 10);
     const phaseIncrement = processingTime / processingPhases.length;
     
     const progressInterval = setInterval(() => {
@@ -44,7 +43,6 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-80 backdrop-blur-sm">
       <div className="w-full max-w-md p-6 rounded-xl bg-gray-900 border border-purple-500/30 shadow-2xl shadow-purple-500/20">
-        {/* Decorative header */}
         <div className="relative h-16 mb-8 overflow-hidden rounded-lg bg-gradient-to-r from-purple-900/50 via-purple-600/50 to-fuchsia-800/50">
           <div className="absolute inset-0 flex items-center justify-center">
             <h3 className="text-xl font-bold text-white text-center tracking-wider">
@@ -52,7 +50,6 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
             </h3>
           </div>
           
-          {/* Decorative elements */}
           <div className="absolute top-0 left-0 w-full h-full">
             <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
             <div className="absolute w-32 h-32 -top-16 -left-16 rounded-full bg-purple-600/20 blur-xl"></div>
@@ -60,7 +57,6 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
           </div>
         </div>
         
-        {/* Tattoo machine animation */}
         <div className="flex justify-center mb-6">
           <div className="relative">
             <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-pulse">
@@ -74,7 +70,6 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
               </circle>
             </svg>
             
-            {/* Scanning effect */}
             <div className="absolute left-0 top-0 w-full h-full overflow-hidden">
               <div className="w-full h-2 bg-purple-500/50 blur-sm absolute" style={{
                 top: `${progress}%`,
@@ -85,14 +80,12 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
           </div>
         </div>
         
-        {/* Processing phase */}
         <div className="text-center mb-4">
           <p className="text-white text-lg font-medium h-8">
             {processingPhases[currentPhase]}
           </p>
         </div>
         
-        {/* Progress bar */}
         <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden mb-4">
           <div 
             className="h-full rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600"
@@ -100,13 +93,11 @@ const ImageProcessingAnimation = ({ isVisible = true, processingTime = 5 }) => {
           ></div>
         </div>
         
-        {/* Loading message */}
         <p className="text-gray-400 text-sm text-center">
           Our AI is analyzing your tattoo to find matching artists. Please wait...
         </p>
       </div>
       
-      {/* Add CSS animations */}
       <style jsx>{`
         @keyframes scan {
           0% { opacity: 0.5; transform: translateY(-2px); }

@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 
 /**
- * Helper function to calculate distance between two coordinates
+ * Calculate distance between two coordinates using Haversine formula
  * @param {Array} point1 [latitude, longitude]
  * @param {Array} point2 [latitude, longitude]
  * @returns {number} distance in kilometers
@@ -37,7 +37,7 @@ const calculateDistance = (point1, point2) => {
 };
 
 /**
- * Function to parse coordinates from string
+ * Parse coordinates from string format
  * @param {string} coordString - Coordinates in "lat,lng" format
  * @returns {Array|null} - [latitude, longitude] or null if invalid
  */
@@ -93,8 +93,7 @@ const styleNameToIdMap = {
 };
 
 /**
- * SearchResults component
- * Handles fetching and displaying artist results based on search criteria
+ * SearchResults component - Handles fetching and displaying artist results based on search criteria
  */
 const SearchResults = () => {
   const location = useLocation();
@@ -111,7 +110,7 @@ const SearchResults = () => {
   // State to track current search parameters
   const [currentSearch, setCurrentSearch] = useState('');
 
-  // Function to get search parameters from URL
+  // Get search parameters from URL
   const getSearchParams = useCallback(() => {
     const searchParams = new URLSearchParams(location.search);
     
@@ -128,15 +127,10 @@ const SearchResults = () => {
   // Memoized search parameters
   const searchParams = getSearchParams();
 
-  /**
-   * Fetches artists from Supabase based on search criteria
-   */
+  // Fetch artists from Supabase based on search criteria
   const fetchArtists = useCallback(async (resetPage = false) => {
     try {
-      // Track the new search params as string to detect changes
       const searchParamsString = JSON.stringify(searchParams);
-      
-      // If starting a new search, reset page to 1
       const currentPage = resetPage ? 1 : page;
       
       if (resetPage) {
@@ -149,20 +143,17 @@ const SearchResults = () => {
       setIsLoading(true);
       setError(null);
 
-      // Apply pagination
       const pageSize = 10;
       const startRange = (currentPage - 1) * pageSize;
       const endRange = startRange + pageSize - 1;
 
-      // Initialize an array to store artist IDs
       let artistIds = [];
       let userMatches = [];
 
-      // If we have a search query, first look for users/artists by name
+      // Search for users by name if search query exists
       if (searchParams.searchQuery && searchParams.searchQuery.trim() !== '') {
         const searchTerm = searchParams.searchQuery.trim();
         
-        // Search for users by name (first_name or last_name)
         const { data: matchingUsers, error: userError } = await supabase
           .from('users')
           .select('id, first_name, last_name')
@@ -173,7 +164,6 @@ const SearchResults = () => {
         }
       }
 
-      // Base query for artist profiles
       let query = supabase
         .from('artist_profiles')
         .select(`
@@ -189,12 +179,10 @@ const SearchResults = () => {
           recent_works_urls
         `, { count: 'exact' });
         
-      // Apply user name filter if we found matching users
       if (userMatches.length > 0) {
         const userIds = userMatches.map(user => user.id);
         query = query.in('user_id', userIds);
       }
-      // If we have a search query but no matching users, also try bio as a fallback
       else if (searchParams.searchQuery && searchParams.searchQuery.trim() !== '') {
         query = query.or(`bio.ilike.%${searchParams.searchQuery.trim()}%,instagram_handle.ilike.%${searchParams.searchQuery.trim()}%`);
       }
@@ -202,15 +190,12 @@ const SearchResults = () => {
       // Filter by style if provided
       if (searchParams.styleName && searchParams.styleName.trim() !== '') {
         try {
-          // Get style ID - try both as-is and lowercase for better matching
           const styleNameInput = searchParams.styleName.trim();
           
-          // Look up style ID in our map with more flexible matching
           let styleId = styleNameToIdMap[styleNameInput] ||
             styleNameToIdMap[styleNameInput.toLowerCase()] ||
             styleNameToIdMap[styleNameInput.charAt(0).toUpperCase() + styleNameInput.slice(1).toLowerCase()];
 
-          // If no direct match, try partial matching
           if (!styleId) {
             for (const [key, id] of Object.entries(styleNameToIdMap)) {
               if (key.includes(styleNameInput.toLowerCase()) ||
@@ -222,7 +207,6 @@ const SearchResults = () => {
           }
 
           if (!styleId) {
-            // If no style ID found, return empty results
             setArtists([]);
             setTotalResults(0);
             setHasMore(false);
@@ -230,7 +214,6 @@ const SearchResults = () => {
             return;
           }
 
-          // Find artists linked to this style
           const { data: artistsWithStyle, error: artistsError } = await supabase
             .from('styles_artists')
             .select('artist_id')
@@ -241,7 +224,6 @@ const SearchResults = () => {
           }
 
           if (!artistsWithStyle || artistsWithStyle.length === 0) {
-            // No artists with this style, return empty results
             setArtists([]);
             setTotalResults(0);
             setHasMore(false);
@@ -249,30 +231,24 @@ const SearchResults = () => {
             return;
           }
 
-          // Extract the artist IDs
           const styleArtistIds = artistsWithStyle.map(a => a.artist_id);
           artistIds = styleArtistIds;
           
-          // Add IDs to the main query
           query = query.in('id', styleArtistIds);
         } catch (styleFilterError) {
           throw styleFilterError;
         }
       }
 
-      // Filter by location string if provided but no coordinates
+      // Filter by location if no coordinates provided
       if (searchParams.location && searchParams.location.trim() !== '' && (!searchParams.coordinates || !searchParams.radius)) {
         query = query.ilike('location', `%${searchParams.location.trim()}%`);
       }
       
-      // If we're not filtering by coordinates yet, apply pagination and execute query
-      // Otherwise, we'll fetch all results first and filter by distance later
       if (!searchParams.coordinates || !searchParams.radius) {
-        // Apply pagination
         query = query.range(startRange, endRange);
       }
 
-      // Execute the query with timeout
       const queryPromise = query;
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Query timeout')), 10000)
@@ -287,7 +263,6 @@ const SearchResults = () => {
         throw artistError;
       }
 
-      // If no artists found, return empty results
       if (!artistsData || artistsData.length === 0) {
         setArtists([]);
         setTotalResults(0);
@@ -296,48 +271,37 @@ const SearchResults = () => {
         return;
       }
       
-      // If we have coordinates and radius, filter artists by distance
       let filteredArtistsData = [...artistsData];
       let totalCount = count || 0;
       
+      // Filter by distance if coordinates and radius provided
       if (searchParams.coordinates && searchParams.radius && searchParams.coordinates.length === 2) {
-        // Filter artists by distance
         filteredArtistsData = artistsData.filter(artist => {
-          // Parse artist location from string format
           const artistCoords = parseCoordinates(artist.location);
           
-          // Skip artists with invalid coordinates
           if (!artistCoords) return false;
           
-          // Calculate distance
           const distance = calculateDistance(searchParams.coordinates, artistCoords);
           
-          // Include artist if within radius
           return distance <= searchParams.radius;
         });
         
-        // Update count for pagination
         totalCount = filteredArtistsData.length;
-        
-        // Apply pagination manually
         filteredArtistsData = filteredArtistsData.slice(startRange, endRange + 1);
       }
 
-      // Update total results count on first page
       if (currentPage === 1) {
         setTotalResults(totalCount);
       }
 
-      // Extract artist IDs for additional queries
       const currentArtistIds = filteredArtistsData.map(artist => artist.id);
 
-      // Get user data for these artists
+      // Fetch additional data for artists
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, first_name, last_name, email')
         .in('id', filteredArtistsData.map(artist => artist.user_id));
 
-      // Get styles for these artists in one efficient query
       const { data: artistStyles, error: stylesError } = await supabase
         .from('styles_artists')
         .select(`
@@ -346,7 +310,6 @@ const SearchResults = () => {
         `)
         .in('artist_id', currentArtistIds);
 
-      // Get review counts for these artists - using a manual count approach
       let reviewCounts = [];
       try {
         const { data: reviewsData, error: reviewsError } = await supabase
@@ -355,13 +318,11 @@ const SearchResults = () => {
           .in('artist_id', currentArtistIds);
 
         if (!reviewsError && reviewsData) {
-          // Count reviews for each artist manually
           const countMap = {};
           reviewsData.forEach(review => {
             countMap[review.artist_id] = (countMap[review.artist_id] || 0) + 1;
           });
 
-          // Convert to required structure
           reviewCounts = Object.entries(countMap).map(([artist_id, count]) => ({
             artist_id,
             count
@@ -371,12 +332,9 @@ const SearchResults = () => {
         // Continue without review counts if there's an error
       }
 
-      // Process the results to format them for the frontend
       const formattedArtists = filteredArtistsData.map(artist => {
-        // Get user data for this artist
         const user = userData?.find(u => u.id === artist.user_id);
 
-        // Get styles for this artist
         const styles = artistStyles
           ? artistStyles
             .filter(s => s.artist_id === artist.id)
@@ -384,12 +342,10 @@ const SearchResults = () => {
             .filter(Boolean)
           : [];
 
-        // Get review count for this artist
         const reviewData = reviewCounts
           ? reviewCounts.find(r => r.artist_id === artist.id)
           : null;
           
-        // Calculate distance if coordinates are available
         let distance = null;
         if (searchParams.coordinates && searchParams.coordinates.length === 2) {
           const artistCoords = parseCoordinates(artist.location);
@@ -404,7 +360,7 @@ const SearchResults = () => {
           profileImage: artist.profile_image_url || '/api/placeholder/400/400',
           recentWorks: artist.recent_works_urls || Array(3).fill('/api/placeholder/400/400'),
           location: artist.location || 'Location not specified',
-          distance: distance !== null ? distance.toFixed(1) : null, // Add distance information
+          distance: distance !== null ? distance.toFixed(1) : null,
           styles: styles,
           rating: artist.avg_rating || 0,
           reviewCount: reviewData ? reviewData.count : 0,
@@ -415,7 +371,7 @@ const SearchResults = () => {
         };
       });
       
-      // Sort by distance if we have coordinates
+      // Sort by distance if coordinates provided
       if (searchParams.coordinates && searchParams.coordinates.length === 2) {
         formattedArtists.sort((a, b) => {
           if (a.distance === null) return 1;
@@ -424,12 +380,10 @@ const SearchResults = () => {
         });
       }
 
-      // Update state
       setArtists(prev => resetPage ? formattedArtists : [...prev, ...formattedArtists]);
       setHasMore(formattedArtists.length === pageSize);
       setError(null);
     } catch (err) {
-      // Improved error handling
       if (err.message === 'Query timeout') {
         setError('The search is taking too long. Please try again with more specific criteria.');
       } else if (err.message && err.message.includes('Failed to fetch')) {

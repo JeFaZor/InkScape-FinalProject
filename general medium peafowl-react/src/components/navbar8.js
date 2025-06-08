@@ -1,7 +1,7 @@
 import React, { useState, Fragment } from 'react'
 import { useHistory } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next'; // הוספה חדשה
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types'
 
 import './navbar8.css'
@@ -9,21 +9,21 @@ import { useAuth } from './context/AuthContext';
 
 const Navbar8 = (props) => {
   const history = useHistory();
-  const { t, i18n } = useTranslation(); // הוספה חדשה
+  const { t, i18n } = useTranslation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [languageMenuOpen, setLanguageMenuOpen] = useState(false); // הוספה חדשה
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
 
   const [link5DropdownVisible, setLink5DropdownVisible] = useState(false)
   const { user, isAuthenticated, signOut } = useAuth();
   const [link5AccordionOpen, setLink5AccordionOpen] = useState(false)
 
-  // פונקציה לשינוי שפה - הוספה חדשה
+  // Function to change language
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
     setLanguageMenuOpen(false);
   };
 
-  // קבלת השפה הנוכחית - הוספה חדשה
+  // Get current language
   const currentLanguage = i18n.language || 'en';
 
   return (
@@ -57,34 +57,7 @@ const Navbar8 = (props) => {
                 </span>
               </Fragment>
             </a>
-            <div
-              onClick={() => setLink5DropdownVisible(!link5DropdownVisible)}
-              className="navbar8-link4-dropdown-trigger"
-            >
-              <span>
-                <Fragment>
-                  <span className="navbar8-text14 thq-link thq-body-small">
-                    {t('navbar.search')}
-                  </span>
-                </Fragment>
-              </span>
-              <div className="navbar8-icon-container1">
-                {link5DropdownVisible && (
-                  <div className="navbar8-container2">
-                    <svg viewBox="0 0 1024 1024" className="navbar8-icon10">
-                      <path d="M298 426h428l-214 214z"></path>
-                    </svg>
-                  </div>
-                )}
-                {!link5DropdownVisible && (
-                  <div className="navbar8-container3">
-                    <svg viewBox="0 0 1024 1024" className="navbar8-icon12">
-                      <path d="M426 726v-428l214 214z"></path>
-                    </svg>
-                  </div>
-                )}
-              </div>
-            </div>
+       
           </nav>
           <div className="navbar8-buttons1">
             {/* Language Switcher - הוספה חדשה */}
@@ -395,7 +368,7 @@ const Navbar8 = (props) => {
                 )}
               </div>
 
-              {/* Language switcher למובייל */}
+              {/* Mobile language switcher */}
               <div className="mt-4 px-4">
                 <div className="flex space-x-2">
                   <button

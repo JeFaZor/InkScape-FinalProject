@@ -17,7 +17,7 @@ const ArtistProfile = () => {
   const location = useLocation();
   // Extract artistId from location state if available
   const artistId = location.state?.artistId;
-  
+
   // Component state
   const [loading, setLoading] = useState(true);
   const [artist, setArtist] = useState(null);
@@ -43,7 +43,7 @@ const ArtistProfile = () => {
             console.error("Error fetching artist profile:", artistError);
             throw artistError;
           }
-          
+
           if (!artistProfile) {
             console.error("Artist profile not found for ID:", artistId);
             throw new Error('Artist profile not found');
@@ -88,15 +88,15 @@ const ArtistProfile = () => {
             ...artistProfile,
             name: userData ? `${userData.first_name} ${userData.last_name}` : 'Unknown Artist',
             email: userData ? userData.email : '',
-            styles: stylesData 
-              ? stylesData.map(item => item.styles?.name).filter(Boolean) 
+            styles: stylesData
+              ? stylesData.map(item => item.styles?.name).filter(Boolean)
               : [],
             reviews: reviewsData || []
           };
 
           setArtist(fullArtistData);
           console.log("Artist data loaded successfully:", fullArtistData);
-        } 
+        }
         // Fallback method: Search by name if no ID is available
         else {
           console.log("No artist ID in state, trying to find by name:", name);
@@ -114,7 +114,7 @@ const ArtistProfile = () => {
             console.error("Error searching for user by name:", userError);
             throw userError;
           }
-          
+
           if (!userData || userData.length === 0) {
             console.error("No user found with name:", decodedName);
             throw new Error('Artist not found');
@@ -134,7 +134,7 @@ const ArtistProfile = () => {
             console.error("Error fetching artist profile by user ID:", artistError);
             throw artistError;
           }
-          
+
           if (!artistProfile) {
             console.error("No artist profile found for user ID:", userId);
             throw new Error('Artist profile not found');
@@ -167,8 +167,8 @@ const ArtistProfile = () => {
             ...artistProfile,
             name: `${userData[0].first_name} ${userData[0].last_name}`,
             email: userData[0].email || '',
-            styles: stylesData 
-              ? stylesData.map(item => item.styles?.name).filter(Boolean) 
+            styles: stylesData
+              ? stylesData.map(item => item.styles?.name).filter(Boolean)
               : [],
             reviews: reviewsData || []
           };
@@ -227,13 +227,13 @@ const ArtistProfile = () => {
                 />
               </div>
             </div>
-            
+
             {/* Artist Info */}
             <div className="flex-grow">
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
                 <div>
                   <h1 className="text-3xl font-bold text-white">{artist.name}</h1>
-                  
+
                   {/* Verification Badge */}
                   {artist.is_verified && (
                     <div className="inline-flex items-center gap-1 text-green-400 text-sm mt-1">
@@ -241,7 +241,7 @@ const ArtistProfile = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Artist Rating */}
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
                   <div className="flex items-center">
@@ -253,7 +253,7 @@ const ArtistProfile = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Location Information */}
               {artist.service_area && (
                 <div className="flex items-start gap-2 mb-3">
@@ -261,7 +261,7 @@ const ArtistProfile = () => {
                   <span className="text-gray-300">{artist.service_area}</span>
                 </div>
               )}
-              
+
               {/* Instagram Handle */}
               {artist.instagram_handle && (
                 <div className="flex items-center gap-2 mb-4">
@@ -276,13 +276,13 @@ const ArtistProfile = () => {
                   </a>
                 </div>
               )}
-              
+
               {/* Contact Button */}
               <button className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 transition-colors">
                 <MessageCircle className="w-4 h-4" />
                 Contact Artist
               </button>
-              
+
               {/* Artist Bio */}
               {artist.bio && (
                 <div className="mt-4">
@@ -293,11 +293,11 @@ const ArtistProfile = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Tattoo Styles Section */}
         <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20 mb-8">
           <h2 className="text-xl font-bold text-white mb-4">Specializes In</h2>
-          
+
           <div className="flex flex-wrap gap-2">
             {artist.styles.length > 0 ? (
               artist.styles.map((style) => (
@@ -313,11 +313,11 @@ const ArtistProfile = () => {
             )}
           </div>
         </div>
-        
+
         {/* Portfolio / Recent Work Section */}
         <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20 mb-8">
           <h2 className="text-xl font-bold text-white mb-4">Recent Work</h2>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {artist.recent_works_urls && artist.recent_works_urls.length > 0 ? (
               artist.recent_works_urls.map((imageUrl, index) => (
@@ -336,11 +336,11 @@ const ArtistProfile = () => {
             )}
           </div>
         </div>
-        
+
         {/* Reviews Section */}
         <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-600/20">
           <h2 className="text-xl font-bold text-white mb-4">Reviews</h2>
-          
+
           {artist.reviews.length > 0 ? (
             <div className="space-y-4">
               {artist.reviews.map((review) => (

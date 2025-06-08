@@ -5,17 +5,14 @@ import { Link } from 'react-router-dom';
 
 /**
  * Custom hook to convert GPS coordinates to a readable address
- * Fixed to prevent memory leaks when component unmounts
  */
 const useReverseGeocode = (coordinates) => {
   const [address, setAddress] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Use ref to track component mounted state
   const isMounted = useRef(true);
 
-  // Reset mounted flag when component unmounts
   useEffect(() => {
     return () => {
       isMounted.current = false;
@@ -24,13 +21,12 @@ const useReverseGeocode = (coordinates) => {
 
   useEffect(() => {
     const fetchAddress = async () => {
-      // Check if the input is in coordinate format
-      const coordString = coordinates.replace(/[()]/g, ''); // Remove parentheses if present
+      const coordString = coordinates.replace(/[()]/g, '');
       const coordRegex = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
 
       if (!coordinates || !coordRegex.test(coordString)) {
         if (isMounted.current) {
-          setAddress(coordinates); // Return as is if not in coordinate format
+          setAddress(coordinates);
         }
         return;
       }
@@ -42,18 +38,16 @@ const useReverseGeocode = (coordinates) => {
           setLoading(true);
         }
 
-        // Create abort controller for the fetch request
         const controller = new AbortController();
         const signal = controller.signal;
 
-        // Fetch address data from OpenStreetMap
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
           {
             signal: signal,
             headers: {
-              'Accept-Language': 'he', // Set to Hebrew for addresses in Israel
-              'User-Agent': 'INKSCAPE-App/1.0' // Required by Nominatim ToS
+              'Accept-Language': 'he',
+              'User-Agent': 'INKSCAPE-App/1.0'
             }
           }
         );
@@ -64,13 +58,10 @@ const useReverseGeocode = (coordinates) => {
 
         const data = await response.json();
 
-        // Check if component is still mounted before updating state
         if (isMounted.current) {
-          // Format the address based on available data
           if (data && data.address) {
             const { road, city, town, village, suburb, neighbourhood, state } = data.address;
 
-            // Try to get the most specific location
             const locality = city || town || village || suburb || state || '';
             const street = road || neighbourhood || '';
 
@@ -84,12 +75,10 @@ const useReverseGeocode = (coordinates) => {
               setAddress(data.display_name);
             }
           } else {
-            // If we can't get a proper address, format the coordinates nicely
             setAddress(`${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
           }
         }
       } catch (error) {
-        // Ignore abort errors as they are expected when component unmounts
         if (error.name === 'AbortError') {
           console.log('Fetch request was aborted');
           return;
@@ -97,10 +86,8 @@ const useReverseGeocode = (coordinates) => {
 
         console.error('Error fetching address:', error);
 
-        // Only update state if still mounted
         if (isMounted.current) {
           setError(error);
-          // Fallback to formatted coordinates
           setAddress(`${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
         }
       } finally {
@@ -126,11 +113,11 @@ const formatNameForUrl = (name) => {
 
   return name
     .toLowerCase()
-    .replace(/\s+/g, '_')      // Replace spaces with underscores
-    .replace(/[^\w\_]+/g, '')  // Remove non-alphanumeric characters except underscores
-    .replace(/\_\_+/g, '_')    // Replace multiple consecutive underscores with a single one
-    .replace(/^_+/, '')        // Remove underscores from the beginning
-    .replace(/_+$/, '');       // Remove underscores from the end
+    .replace(/\s+/g, '_')
+    .replace(/[^\w\_]+/g, '')
+    .replace(/\_\_+/g, '_')
+    .replace(/^_+/, '')
+    .replace(/_+$/, '');
 };
 
 /**
@@ -220,27 +207,23 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, setCurrentIndex }) 
 };
 
 const ArtistCard = ({ artist = {} }) => {
-  // Add a ref to track if component is mounted
   const isMounted = useRef(true);
 
-  // Reset the flag when component unmounts
   useEffect(() => {
     return () => {
       isMounted.current = false;
     };
   }, []);
 
-  // State for modal and image display
   const [modalOpen, setModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [hoveredImageIndex, setHoveredImageIndex] = useState(null);
 
-  // Destructure artist properties with defaults
   const {
     id,
     name = 'Unknown Artist',
     profileImage = '/api/placeholder/400/400',
-    profile_image_url, // Field from Supabase
+    profile_image_url,
     location = 'Location not specified',
     styles = [],
     rating = 0,
@@ -250,7 +233,7 @@ const ArtistCard = ({ artist = {} }) => {
       '/api/placeholder/400/400',
       '/api/placeholder/400/400'
     ],
-    recent_works_urls = [], // Field from Supabase
+    recent_works_urls = [],
     instagramHandle = '',
     isVerified = false,
     serviceArea = '',
@@ -258,26 +241,18 @@ const ArtistCard = ({ artist = {} }) => {
     avg_rating
   } = artist;
 
-  // Use average rating from database if available
   const displayRating = avg_rating || rating;
-
-  // Use profile image from database if available, otherwise use default
   const displayProfileImage = profile_image_url || profileImage;
-
-  // Use work images from database if available, otherwise use default
   const displayRecentWorks = recent_works_urls.length > 0
     ? recent_works_urls
     : recentWorks;
 
-  // Convert coordinates to readable location
   const { address: formattedLocation, loading: addressLoading } = useReverseGeocode(location);
 
-  // Use formatted location or service area, depending on what's available
   const displayLocation = addressLoading
     ? 'Loading location...'
     : (formattedLocation || serviceArea || 'Location not specified');
 
-  // Function to open image modal with specific image
   const openImageModal = (index) => {
     if (isMounted.current) {
       setCurrentImageIndex(index);

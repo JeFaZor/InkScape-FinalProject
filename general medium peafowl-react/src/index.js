@@ -1,5 +1,5 @@
-// src/index.js
-import './i18n'; // הוסף את השורה הזו בראש הקובץ
+
+import './i18n'; 
 import './styles/tailwind.css';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -16,11 +16,10 @@ import NotFound from './views/not-found';
 
 import Navbar8 from './components/navbar8';
 import AuthScreen from './components/auth/AuthScreen';
-import TestComponent from './components/TestComponent';
+
 import Dashboard from './components/Dashboard';
 import { AuthProvider } from './components/context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-// Import the new ArtistProfile component
 import ArtistProfile from './components/artist/ArtistProfile';
 
 const App = () => {
@@ -29,14 +28,9 @@ const App = () => {
       <Router>
         <Navbar8 />
         <Switch>
-          <Route component={TestComponent} path="/test" />
           <Route component={Home} exact path="/" />
           <Route component={AuthScreen} path="/auth" />
-          
-          {/* New route for artist profile */}
           <Route component={ArtistProfile} path="/artist/:name" />
-          
-          {/* Protected routes - for pages that require authentication */}
           <Route 
             path="/dashboard" 
             render={props => (

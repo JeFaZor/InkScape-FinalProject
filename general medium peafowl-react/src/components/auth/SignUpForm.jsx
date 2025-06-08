@@ -4,6 +4,8 @@ import { Instagram } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useTranslation } from 'react-i18next';
+
 
 // Fix for default marker icon in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -23,6 +25,8 @@ const MapUpdater = ({ center }) => {
 };
 
 const SignUpForm = ({ formData, setFormData }) => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'he'; // או כל בדיקה אחרת לעברית
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -43,10 +47,28 @@ const SignUpForm = ({ formData, setFormData }) => {
   const fileInputRefs = [useRef(null), useRef(null), useRef(null)];
 
   const tattooStyles = [
-    'Traditional', 'New School', 'Anime', 'Fineline', 'Geometric',
+    'Traditional', 'New School', 'Japanese', 'Fineline', 'Geometric',
     'Micro Realism', 'Realism', 'Dot Work', 'Dark Art', 'Flowers',
     'Surrealism', 'Trash Polka'
   ];
+
+  const getStyleTranslation = (style) => {
+    const styleMap = {
+      'Traditional': t('styles.traditional'),
+      'New School': t('styles.newSchool'),
+      'Japanese': t('styles.japanese'),
+      'Fineline': t('styles.fineline'),
+      'Geometric': t('styles.geometric'),
+      'Micro Realism': t('styles.microRealism'),
+      'Realism': t('styles.realism'),
+      'Dot Work': t('styles.dotWork'),
+      'Dark Art': t('styles.darkArt'),
+      'Flowers': t('styles.flowers'),
+      'Surrealism': t('styles.surrealism'),
+      'Trash Polka': t('styles.trashPolka')
+    };
+    return styleMap[style] || style;
+  };
 
   useEffect(() => {
     const strength = calculatePasswordStrength(formData.password);
@@ -292,11 +314,11 @@ const SignUpForm = ({ formData, setFormData }) => {
         ))}
       </div>
       <p className="text-xs text-gray-400">
-        {passwordStrength === 0 && 'Enter password'}
-        {passwordStrength === 1 && 'Weak'}
-        {passwordStrength === 2 && 'Fair'}
-        {passwordStrength === 3 && 'Good'}
-        {passwordStrength === 4 && 'Strong'}
+        {passwordStrength === 0 && t('auth.enterPassword')}
+        {passwordStrength === 1 && t('auth.weak')}
+        {passwordStrength === 2 && t('auth.fair')}
+        {passwordStrength === 3 && t('auth.good')}
+        {passwordStrength === 4 && t('auth.strong')}
       </p>
     </div>
   );
@@ -304,7 +326,7 @@ const SignUpForm = ({ formData, setFormData }) => {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <label className="block text-gray-300 text-sm mb-4">I am a...</label>
+        <label className="block text-gray-300 text-sm mb-4">{t('auth.iAm')}</label>
         <div className="grid grid-cols-2 gap-4">
           <button
             type="button"
@@ -321,8 +343,8 @@ const SignUpForm = ({ formData, setFormData }) => {
               : 'border-gray-700 hover:border-purple-600/50'
               }`}
           >
-            <h3 className="text-white font-medium mb-1">Tattoo Artist</h3>
-            <p className="text-gray-400 text-sm">I own or work at a tattoo studio</p>
+            <h3 className="text-white font-medium mb-1">{t('auth.tattooArtist')}</h3>
+            <p className="text-gray-400 text-sm">{t('auth.iOwnOrWorkAtATattooStudio')}</p>
           </button>
           <button
             type="button"
@@ -339,8 +361,8 @@ const SignUpForm = ({ formData, setFormData }) => {
               : 'border-gray-700 hover:border-purple-600/50'
               }`}
           >
-            <h3 className="text-white font-medium mb-1">Looking for an Artist</h3>
-            <p className="text-gray-400 text-sm">I want to get a tattoo</p>
+            <h3 className="text-white font-medium mb-1">{t('auth.lookingForAnArtist')}</h3>
+            <p className="text-gray-400 text-sm">{t('auth.iWantToGetATattoo')}</p>
           </button>
         </div>
       </div>
@@ -348,7 +370,7 @@ const SignUpForm = ({ formData, setFormData }) => {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="relative">
-            <label className="block text-gray-300 text-sm mb-2">First Name</label>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.firstName')}</label>
             <div className="relative group">
               <input
                 type="text"
@@ -356,13 +378,13 @@ const SignUpForm = ({ formData, setFormData }) => {
                 value={formData.firstName}
                 onChange={handleInputChange}
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600"
-                placeholder="First name"
+                placeholder={t('auth.firstName')}
               />
             </div>
           </div>
 
           <div className="relative">
-            <label className="block text-gray-300 text-sm mb-2">Last Name</label>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.lastName')}</label>
             <div className="relative group">
               <input
                 type="text"
@@ -370,42 +392,45 @@ const SignUpForm = ({ formData, setFormData }) => {
                 value={formData.lastName}
                 onChange={handleInputChange}
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600"
-                placeholder="Last name"
+                placeholder={t('auth.lastName')}
               />
             </div>
           </div>
         </div>
 
         <div className="relative">
-          <label className="block text-gray-300 text-sm mb-2">Email</label>
+          <label className="block text-gray-300 text-sm mb-2">{t('auth.email')}</label>
           <div className="relative group">
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600 transition-colors focus-visible:outline-none"
-              placeholder="Enter your email"
+              className="w-full bg-gray-800 text-white rounded-lg py-3 pr-4 pl-12 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600 transition-colors"
+              placeholder={t('auth.email')}
+              style={{ textAlign: 'left', direction: 'ltr' }}
             />
-            <Mail className="absolute right-3 top-3 text-gray-400" size={20} />
+            <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
           </div>
         </div>
 
+
         <div className="relative">
-          <label className="block text-gray-300 text-sm mb-2">Password</label>
+          <label className="block text-gray-300 text-sm mb-2">{t('auth.password')}</label>
           <div className="relative group">
             <input
               type={showPassword ? "text" : "password"}
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600 transition-colors"
-              placeholder="Choose a password"
+              className="w-full bg-gray-800 text-white rounded-lg py-3 pr-4 pl-12 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600 transition-colors"
+              placeholder={t('auth.chooseAPassword')}
+              style={{ textAlign: 'left', direction: 'ltr' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-gray-400 hover:text-gray-300 focus:outline-none"
+              className="absolute left-3 top-3 text-gray-400 hover:text-gray-300 focus:outline-none"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -418,14 +443,14 @@ const SignUpForm = ({ formData, setFormData }) => {
         <div className="space-y-6">
           {/* Studio Location with Map */}
           <div className="relative space-y-4">
-            <label className="block text-gray-300 text-sm mb-2">Studio Location</label>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.studioLocation')}</label>
 
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchInputChange}
-                placeholder="Search location..."
+                placeholder={t('auth.searchLocation')}
                 className="w-full pl-10 pr-4 py-3 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-purple-600 border border-gray-700"
               />
               <MapPin className="absolute left-3 top-3 text-gray-400" size={20} />
@@ -451,7 +476,7 @@ const SignUpForm = ({ formData, setFormData }) => {
               className="flex items-center justify-center w-full gap-2 py-2 text-gray-300 hover:text-white border border-gray-700 rounded-lg hover:border-gray-600"
             >
               <MapPin className="w-4 h-4" />
-              Use my current location
+              {t('auth.useMyCurrentLocation')}
             </button>
 
             <div className="h-48 rounded-lg overflow-hidden border border-gray-700">
@@ -488,7 +513,7 @@ const SignUpForm = ({ formData, setFormData }) => {
           {/* Image Uploads */}
           {/* Profile Image Upload - Add this code right after the artist location section */}
           <div className="space-y-3">
-            <label className="block text-gray-300 text-sm mb-2">Profile Image</label>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.profileImage')}</label>
             <div className="flex items-center space-x-4">
               <div className="relative">
                 {formData.profileImage ? (
@@ -517,7 +542,8 @@ const SignUpForm = ({ formData, setFormData }) => {
                     className="h-24 w-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-full hover:border-purple-500 transition-colors"
                   >
                     <Upload className="text-gray-400 mb-1" size={20} />
-                    <span className="text-xs text-gray-400">Upload</span>
+                    <span className="text-xs text-gray-400">{t('common.upload')}</span>
+
                   </button>
                 )}
                 <input
@@ -534,14 +560,14 @@ const SignUpForm = ({ formData, setFormData }) => {
                 />
               </div>
               <div className="text-sm text-gray-400">
-                <p>Add a profile image</p>
-                <p className="text-xs">This will be displayed on your profile</p>
+                <p>{t('auth.addAProfileImage')}</p>
+                <p className="text-xs">{t('auth.thisWillBeDisplayedOnYourProfile')}</p>
               </div>
             </div>
           </div>
           <div className="space-y-3">
-            <label className="block text-gray-300 text-sm mb-2">Upload Your Work (3 Images)</label>
-            <p className="text-xs text-gray-400">These images will be displayed in your artist profile</p>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.uploadYourWork')}</label>
+            <p className="text-xs text-gray-400">{t('auth.theseImagesWillBeDisplayedInYourArtistProfile')}</p>
 
             <div className="grid grid-cols-3 gap-4">
               {[0, 1, 2].map((index) => (
@@ -572,7 +598,7 @@ const SignUpForm = ({ formData, setFormData }) => {
                       className="h-32 w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg hover:border-purple-500 transition-colors"
                     >
                       <Upload className="text-gray-400 mb-2" size={24} />
-                      <span className="text-sm text-gray-400">Upload</span>
+                      <span className="text-sm text-gray-400">{t('common.upload')}</span>
                     </button>
                   )}
                   <input
@@ -589,7 +615,7 @@ const SignUpForm = ({ formData, setFormData }) => {
 
           {/* Tattoo Styles */}
           <div>
-            <label className="block text-gray-300 text-sm mb-3">Tattoo Styles</label>
+            <label className="block text-gray-300 text-sm mb-3">{t('auth.tattooStyles')}</label>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
               {tattooStyles.map((style) => (
                 <button
@@ -601,7 +627,7 @@ const SignUpForm = ({ formData, setFormData }) => {
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                     }`}
                 >
-                  {style}
+                  {getStyleTranslation(style)}
                 </button>
               ))}
             </div>
@@ -609,30 +635,31 @@ const SignUpForm = ({ formData, setFormData }) => {
 
           {/* Instagram Handle */}
           <div className="relative">
-            <label className="block text-gray-300 text-sm mb-2">Instagram Handle (Optional)</label>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.instagramHandle')}</label>
             <div className="relative group">
               <input
                 type="text"
                 name="instagram"
                 value={formData.instagram || ''}
                 onChange={handleInputChange}
-                className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600 transition-colors"
-                placeholder="@yourusername"
+                className="w-full bg-gray-800 text-white rounded-lg py-3 pr-4 pl-12 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 group-hover:border-gray-600 transition-colors"
+                placeholder={t('auth.instagramHandle')}
+                style={{ textAlign: 'left', direction: 'ltr' }}
               />
-              <Instagram className="absolute right-3 top-3 text-gray-400" size={20} />
+              <Instagram className="absolute left-3 top-3 text-gray-400" size={20} />
             </div>
           </div>
 
           {/* Bio */}
           <div className="relative">
-            <label className="block text-gray-300 text-sm mb-2">Bio (Optional)</label>
+            <label className="block text-gray-300 text-sm mb-2">{t('auth.bio')}</label>
             <textarea
               name="bio"
               value={formData.bio || ''}
               onChange={handleInputChange}
               rows={4}
               className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 border border-gray-700 hover:border-gray-600 transition-colors"
-              placeholder="Tell clients about yourself and your work..."
+              placeholder={t('auth.tellClientsAboutYourselfAndYourWork')}
             />
           </div>
         </div>

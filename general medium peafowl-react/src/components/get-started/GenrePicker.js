@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Tooltip as ReactTooltip } from 'react-tooltip';
 import 'react-tooltip/dist/react-tooltip.css';
+import { useTranslation } from 'react-i18next';
+
 
 const colors = {
   background: '#0f0312',
@@ -89,6 +91,8 @@ const MemoizedGenreImage = React.memo(({ src, alt, onError, onLoad }) => {
 });
 
 const GenrePicker = ({ genres, onSelectGenre }) => {
+  const { t } = useTranslation(); // הוספה חדשה
+
   const [hoveredGenre, setHoveredGenre] = useState(null);
   const [imageCache, setImageCache] = useState({});
   const [loading, setLoading] = useState(true);
@@ -184,7 +188,7 @@ const GenrePicker = ({ genres, onSelectGenre }) => {
             textAlign: 'center', 
             fontFamily: 'Raleway, sans-serif' 
           }}>
-            {genre.name}
+             {t(`styles.${genre.name.toLowerCase().replace(' ', '')}`)}
           </span>
         </GenreImageContainer>
       ))}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { useHistory, useLocation } from 'react-router-dom';
 import { Search, Image, MapPin, Filter, Tag, X, Loader2 } from 'lucide-react';
 import GenrePicker from './get-started/GenrePicker';
@@ -9,15 +8,15 @@ import SearchResults from './search-results/SearchResults';
 import { useAuth } from './context/AuthContext';
 import ImageProcessingAnimation from './ImageProcessingAnimation';
 
-// Import tattoo style images
+// Tattoo style images
 import traditional from './assets/tat1.jpg';
-import newSchool from './assets/tat2.png';
+import newschool from './assets/tat2.png';
 import japanese from './assets/tat3.png';
 import fineline from './assets/tat4.jpg';
 import geometric from './assets/tat5.jpg';
-import microRealism from './assets/tat6.jpg';
+import microrealism from './assets/tat6.jpg';
 import realism from './assets/tat7.jpg';
-import dotWork from './assets/tat8.jpg';
+import dotwork from './assets/tat8.jpg';
 import darkArt from './assets/tat9.jpg';
 import flowers from './assets/tat10.jpg';
 import surrealism from './assets/tat11.jpg';
@@ -25,13 +24,13 @@ import trashPolka from './assets/tat12.jpg';
 
 const genres = [
   { name: 'Traditional', image: traditional },
-  { name: 'New School', image: newSchool },
+  { name: 'New School', image: newschool },
   { name: 'Japanese', image: japanese },
   { name: 'Fineline', image: fineline },
   { name: 'Geometric', image: geometric },
-  { name: 'Micro Realism', image: microRealism },
+  { name: 'Micro Realism', image: microrealism },
   { name: 'Realism', image: realism },
-  { name: 'Dot Work', image: dotWork },
+  { name: 'Dot Work', image: dotwork },
   { name: 'Dark Art', image: darkArt },
   { name: 'Flowers', image: flowers },
   { name: 'Surrealism', image: surrealism },
@@ -58,6 +57,25 @@ const SearchSection = () => {
   const { t } = useTranslation();
 
 
+const getStyleDisplayName = (styleName) => {
+  const styleTranslations = {
+    'Traditional': t('styles.traditional'),
+    'New School': t('styles.newschool'),
+    'Japanese': t('styles.japanese'),
+    'Fineline': t('styles.fineline'),
+    'Geometric': t('styles.geometric'),
+    'Micro Realism': t('styles.microrealism'),
+    'Realism': t('styles.realism'),
+    'Dot Work': t('styles.dotwork'),
+    'Dark Art': t('styles.darkart'),
+    'Flowers': t('styles.flowers'),
+    'Surrealism': t('styles.surrealism'),
+    'Trash Polka': t('styles.trashpolka')
+  };
+  
+  return styleTranslations[styleName] || styleName;
+};
+
   // State initialization
   const [tagSearchTerm, setTagSearchTerm] = useState('');
   const [showStyleFilter, setShowStyleFilter] = useState(false);
@@ -68,7 +86,7 @@ const SearchSection = () => {
   const [filteredGenres, setFilteredGenres] = useState(genres);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // Initialize all search states
+  // Search states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState('');
@@ -77,26 +95,21 @@ const SearchSection = () => {
   const [locationRadius, setLocationRadius] = useState(5);
 
   const fileInputRef = React.useRef(null);
-  
-  // Add a ref to the search results section for scrolling
   const searchResultsRef = useRef(null);
 
-  // Add effect to automatically scroll to search results when they appear
+  // Auto-scroll to search results when they appear
   useEffect(() => {
     if (hasSearched && searchResultsRef.current) {
-      // Wait a moment to ensure the component has rendered
       setTimeout(() => {
-        // Calculate position - scroll to slightly above the element for better visibility
-        const yOffset = -125; // 50px above the element
+        const yOffset = -125;
         const element = searchResultsRef.current;
         const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
         
-        // Use slower scrolling with lower speed
         window.scrollTo({
           top: y,
           behavior: 'smooth'
         });
-      }, 250); // Longer timeout for more reliability
+      }, 250);
     }
   }, [hasSearched]);
 
@@ -104,7 +117,6 @@ const SearchSection = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
 
-    // Get search parameters from URL
     const queryTerm = params.get('q') || '';
     const styleParam = params.get('style') || '';
     const locationParam = params.get('location') || '';
@@ -112,11 +124,8 @@ const SearchSection = () => {
     const coordsParam = params.get('coords') || '';
     const radiusParam = params.get('radius') || '5';
 
-    // Update state only if the URL parameters are different from current state
-    // This prevents infinite loops or unnecessary updates
     if (queryTerm !== searchTerm) setSearchTerm(queryTerm);
 
-    // Handle style parameter
     if (styleParam) {
       const matchedStyle = genres.find(g => g.name === styleParam);
       if (matchedStyle && (!selectedStyle || selectedStyle.name !== styleParam)) {
@@ -126,12 +135,10 @@ const SearchSection = () => {
       setSelectedStyle(null);
     }
 
-    // Handle location parameter
     if (locationParam !== selectedLocation) {
       setSelectedLocation(locationParam);
     }
 
-    // Handle coordinates parameter
     if (coordsParam) {
       try {
         const coords = JSON.parse(coordsParam);
@@ -147,7 +154,6 @@ const SearchSection = () => {
       setLocationCoordinates(null);
     }
 
-    // Handle radius parameter
     if (radiusParam) {
       const radius = parseFloat(radiusParam);
       if (!isNaN(radius) && radius !== locationRadius) {
@@ -155,12 +161,10 @@ const SearchSection = () => {
       }
     }
 
-    // Handle tags parameter
     if (JSON.stringify(tagsParam) !== JSON.stringify(selectedTags)) {
       setSelectedTags(tagsParam);
     }
 
-    // If there are any search parameters, consider it a search
     if (queryTerm || styleParam || locationParam || tagsParam.length > 0) {
       setHasSearched(true);
     }
@@ -173,28 +177,23 @@ const SearchSection = () => {
     );
   }, [tagSearchTerm]);
 
-  // Handle search button click - UPDATED to close filters when searching
+  // Handle search button click
   const handleSearch = () => {
-    // Prevent search if already searching
     if (isSearching) return;
 
     setIsSearching(true);
     
-    // Close all filter dropdowns when search is initiated
     setShowStyleFilter(false);
     setShowLocationFilter(false);
     setShowTagFilter(false);
 
-    // Create search parameters object
     const params = new URLSearchParams();
 
-    // Add parameters if they exist
     if (searchTerm) params.set('q', searchTerm);
     if (selectedStyle) params.set('style', selectedStyle.name);
     if (selectedLocation) {
       params.set('location', selectedLocation);
 
-      // Add coordinates and radius
       if (locationCoordinates && locationCoordinates.length === 2) {
         params.set('coords', JSON.stringify(locationCoordinates));
         params.set('radius', locationRadius.toString());
@@ -202,12 +201,10 @@ const SearchSection = () => {
     }
     if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
 
-    // Update URL with new search parameters - this will trigger the useEffect above
     const searchString = params.toString();
     const newUrl = searchString ? `?${searchString}` : '/';
     history.push(newUrl);
 
-    // Always set hasSearched to true after search
     setHasSearched(true);
     setIsSearching(false);
   };
@@ -217,7 +214,6 @@ const SearchSection = () => {
     const file = event.target.files[0];
     if (file) {
       setSelectedImage(URL.createObjectURL(file));
-
       setIsProcessing(true);
 
       try {
@@ -268,7 +264,6 @@ const SearchSection = () => {
 
   // Reset all search parameters
   const handleReset = () => {
-    // Reset all state values
     setSearchTerm('');
     setSelectedStyle(null);
     setSelectedLocation('');
@@ -277,10 +272,8 @@ const SearchSection = () => {
     setSelectedTags([]);
     setSelectedImage(null);
 
-    // Reset URL to home page
     history.push('/');
 
-    // Close any open filters
     setShowStyleFilter(false);
     setShowLocationFilter(false);
     setShowTagFilter(false);
@@ -315,9 +308,7 @@ const SearchSection = () => {
   return (
     <div className="relative w-full max-w-8xl mx-auto">
       <div className={`relative w-full max-w-2xl mx-auto ${showStyleFilter ? 'mb-80' : 'mb-0'}`}>
-        {/* Main Search Options */}
         <div className="flex flex-col space-y-4">
-          {/* Text Search */}
           <div className="relative flex items-center">
             <div className="relative w-full">
               <input
@@ -338,7 +329,6 @@ const SearchSection = () => {
             </div>
           </div>
 
-          {/* Filter Buttons */}
           <div className="flex gap-4 justify-center">
             <button
               onClick={() => {
@@ -352,7 +342,7 @@ const SearchSection = () => {
                 }`}
             >
               <Filter className="w-4 h-4" />
-              {selectedStyle ? selectedStyle.name : t('search.style')}
+              {selectedStyle ? getStyleDisplayName(selectedStyle.name) : t('search.style')}
             </button>
 
             <button
@@ -390,14 +380,12 @@ const SearchSection = () => {
                 onClick={handleReset}
                 className="px-4 py-2 rounded-lg text-gray-300 hover:text-white"
               >
-                Clear Filters
+                {t('search.clearFilters')}
               </button>
             )}
           </div>
 
-          {/* Filter Dropdowns Container */}
           <div className="relative isolate">
-            {/* Style Filter Dropdown */}
             {showStyleFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-10">
                 <div className="px-4">
@@ -409,7 +397,6 @@ const SearchSection = () => {
               </div>
             )}
 
-            {/* Location Filter Dropdown */}
             {showLocationFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-10">
                 <LocationSearch
@@ -419,11 +406,9 @@ const SearchSection = () => {
               </div>
             )}
 
-            {/* Tag Filter Dropdown */}
             {showTagFilter && (
               <div className="relative w-full flex justify-center mt-4 mb-4 w-100">
                 <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
-                  {/* Search field for tags */}
                   <div className="p-2 border-b border-gray-700">
                     <input
                       type="text"
@@ -434,7 +419,6 @@ const SearchSection = () => {
                     />
                   </div>
 
-                  {/* Filtered tags list */}
                   <div className="max-h-60 overflow-y-auto">
                     {filteredTags.map((tagItem) => (
                       <button
@@ -446,7 +430,6 @@ const SearchSection = () => {
                       </button>
                     ))}
 
-                    {/* Message if no results */}
                     {filteredTags.length === 0 && (
                       <div className="px-3 py-2 text-gray-500 text-sm">
                         No matching tags found
@@ -458,9 +441,9 @@ const SearchSection = () => {
             )}
           </div>
 
-          {/* Selected Tags Display */}
           {selectedTags.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 mt-4">              {selectedTags.map((tag) => (
+            <div className="flex flex-wrap justify-center gap-2 mt-4">
+              {selectedTags.map((tag) => (
                 <div
                   key={tag}
                   className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-900/50 border border-purple-500 text-purple-200"
@@ -493,17 +476,15 @@ const SearchSection = () => {
             {isSearching ? t('search.searching') : t('search.searchArtists')}
           </button>
 
-          {/* Divider with "or" text */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-700"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="px-2 text-gray-400 bg-black/30">or</span>
+              <span className="px-2 text-gray-400 bg-black/30">{t('search.or')}</span>
             </div>
           </div>
 
-          {/* AI Image Search */}
           <div className="flex flex-col items-center space-y-4">
             <input
               type="file"
@@ -517,15 +498,13 @@ const SearchSection = () => {
               className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-violet-800 to-fuchsia-800 text-white hover:from-violet-900 hover:to-fuchsia-900 transition-all"
             >
               <Image className="w-5 h-5" />
-              Find Artists Using AI Image Analysis
+              {t('search.aiImageAnalysis')}
             </button>
 
-            {/* Explanation text */}
             <p className="text-sm text-gray-400 text-center max-w-md py-6">
-              Upload a tattoo image and our AI will analyze its style to find artists who specialize in similar work
+              {t('search.uploadDescription')}
             </p>
 
-            {/* Preview uploaded image if exists */}
             {selectedImage && (
               <div className="mt-4 relative group">
                 <img
@@ -547,19 +526,16 @@ const SearchSection = () => {
         </div>
       </div>
       
-      {/* Search Results with ref for auto-scrolling - adding a visible anchor above */}
       <div 
-        className="w-full pt-8" /* Added top padding for better scroll position */
+        className="w-full pt-8"
         style={{ width: '100%', maxWidth: '100%' }} 
         ref={searchResultsRef}
       >
-        {/* Invisible anchor element for better scroll positioning */}
         <div className="h-4 -mt-4" id="search-results-anchor"></div>
         
         {hasSearched && <SearchResults />}
       </div>
 
-      {/* Processing Animation */}
       {isProcessing && (
         <ImageProcessingAnimation
           isVisible={true}

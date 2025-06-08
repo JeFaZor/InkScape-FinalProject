@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 const USER_DATA_CACHE_KEY = 'inkscape_user_data_cache';
@@ -8,8 +8,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const currentSessionRef = useRef(null);
 
-  const fetchUserData = async (userId) => {
+  const fetchUserData = useCallback(async (userId) => {
     try {
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -21,7 +22,6 @@ export function AuthProvider({ children }) {
         return null;
       }
 
-      // If user is an artist, fetch their profile image
       if (userData.user_type === 'artist') {
         const { data: artistData, error: artistError } = await supabase
           .from('artist_profiles')
@@ -36,11 +36,34 @@ export function AuthProvider({ children }) {
       
       return userData;
     } catch (error) {
+      console.error('Error fetching user data:', error);
       return null;
     }
-  };
+  }, []);
 
-  const updateUserState = async (session) => {
+  const hasSessionChanged = useCallback((newSession) => {
+    const currentSession = currentSessionRef.current;
+    
+    if (!currentSession && newSession) {
+      return true;
+    }
+    
+    if (currentSession && !newSession) {
+      return true;
+    }
+    
+    if (!currentSession && !newSession) {
+      return false;
+    }
+    
+    if (currentSession && newSession) {
+      return currentSession.access_token !== newSession.access_token;
+    }
+    
+    return false;
+  }, []);
+
+  const updateUserState = useCallback(async (session) => {
     try {
       if (session) {
         // Check for cached user data
@@ -54,7 +77,7 @@ export function AuthProvider({ children }) {
             }
           }
         } catch (cacheError) {
-          // Continue without cache
+          console.error('Cache error:', cacheError);
         }
 
         if (cachedUserData) {
@@ -63,25 +86,29 @@ export function AuthProvider({ children }) {
           setUser(session.user);
         }
 
-        // Always fetch fresh data from server
+        // Fetch fresh data from server
         const userData = await fetchUserData(session.user.id);
 
         if (userData) {
           const completeUserData = { ...session.user, ...userData };
           setUser(completeUserData);
           
-          // Cache the complete user data
           try {
             localStorage.setItem(USER_DATA_CACHE_KEY, JSON.stringify(completeUserData));
           } catch (cacheError) {
-            // Continue without caching
+            console.error('Cache storage error:', cacheError);
           }
         }
       } else {
         setUser(null);
-        localStorage.removeItem(USER_DATA_CACHE_KEY);
+        try {
+          localStorage.removeItem(USER_DATA_CACHE_KEY);
+        } catch (error) {
+          console.error('Error removing cache:', error);
+        }
       }
     } catch (error) {
+      console.error('Error updating user state:', error);
       if (session) {
         setUser(session.user);
       }
@@ -89,50 +116,80 @@ export function AuthProvider({ children }) {
       setLoading(false);
       if (!initialized) setInitialized(true);
     }
-  };
+  }, [fetchUserData, initialized]);
 
   useEffect(() => {
+    let isMounted = true;
+    let authListener = null;
+
     const initializeAuth = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
 
       try {
-        // First, check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          setLoading(false);
+          console.error('Session error:', error);
+          if (isMounted) setLoading(false);
           return;
         }
 
-        // Handle the current session state
-        await updateUserState(session);
+        if (isMounted) {
+          currentSessionRef.current = session;
+          await updateUserState(session);
+        }
 
-        // Set up auth state change listener
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-          async (event, newSession) => {
-            await updateUserState(newSession);
-          }
-        );
-
-        // Return cleanup function
-        return () => {
-          if (authListener && authListener.subscription) {
-            authListener.subscription.unsubscribe();
-          }
-        };
+        if (isMounted) {
+          const { data } = supabase.auth.onAuthStateChange(
+            async (event, newSession) => {
+              if (!isMounted) return;
+              
+              console.log('Auth state changed:', event);
+              
+              if (hasSessionChanged(newSession)) {
+                console.log('Session actually changed - updating user state');
+                currentSessionRef.current = newSession;
+                await updateUserState(newSession);
+              } else {
+                console.log('Session unchanged - skipping update (tab focus/blur)');
+                if (loading) {
+                  setLoading(false);
+                }
+              }
+            }
+          );
+          authListener = data;
+        }
       } catch (error) {
-        setLoading(false);
+        console.error('Auth initialization error:', error);
+        if (isMounted) setLoading(false);
       }
     };
 
     initializeAuth();
+
+    return () => {
+      isMounted = false;
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+      currentSessionRef.current = null;
+    };
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       setLoading(true);
       setUser(null);
-      localStorage.removeItem(USER_DATA_CACHE_KEY);
+      currentSessionRef.current = null;
+      
+      try {
+        localStorage.removeItem(USER_DATA_CACHE_KEY);
+      } catch (error) {
+        console.error('Error removing cache on signout:', error);
+      }
       
       await supabase.auth.signOut();
       
@@ -140,11 +197,12 @@ export function AuthProvider({ children }) {
         window.location.href = '/';
       }, 100);
     } catch (error) {
+      console.error('Error signing out:', error);
       window.location.href = '/';
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const value = {
     user,

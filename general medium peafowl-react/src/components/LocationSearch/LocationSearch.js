@@ -13,6 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Component to update map center when location changes
 const MapUpdater = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -21,6 +22,7 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
+// Format address by removing unnecessary parts and keeping only relevant information
 const formatAddress = (fullAddress) => {
   const parts = fullAddress.split(',');
  
@@ -39,11 +41,10 @@ const formatAddress = (fullAddress) => {
 };
 
 const LocationSearch = ({ onLocationSelect, onClose }) => {
-  const { t, i18n } = useTranslation(); // עדכן את השורה הזאת
-    // useEffect כאן
-    useEffect(() => {
-      // Force re-render when language changes
-    }, [i18n.language]);
+  const { t, i18n } = useTranslation();
+  useEffect(() => {
+    // Force re-render when language changes
+  }, [i18n.language]);
   const [searchQuery, setSearchQuery] = useState('');
   const [address, setAddress] = useState('');
   const [radius, setRadius] = useState(1.5);
@@ -54,6 +55,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
   const [markerPosition, setMarkerPosition] = useState([31.7767, 35.2345]);
   const searchTimeout = useRef(null);
 
+  // Search for locations using OpenStreetMap Nominatim API
   const searchLocation = async (query) => { 
     if (!query.trim()) {
       setSearchResults([]);
@@ -74,6 +76,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
     }
   };
 
+  // Debounced search input handler
   const handleSearchInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
@@ -86,6 +89,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
     }, 500);
   };
 
+  // Handle selection of a search result
   const handleSearchResultClick = (result) => {
     const newPosition = [parseFloat(result.lat), parseFloat(result.lon)];
     setMarkerPosition(newPosition);
@@ -96,6 +100,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
     setSearchResults([]); // Clear results after selection
   };
 
+  // Get user's current location using browser geolocation
   const handleCurrentLocation = () => {
     setIsLoadingLocation(true);
     if (navigator.geolocation) {
@@ -129,6 +134,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
     }
   };
 
+  // Handle location confirmation and close modal
   const handleConfirm = () => {
     if (address) {
       onLocationSelect({
@@ -140,6 +146,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
     }
   };
 
+  // Handle map click to update marker position and address
   const handleMapClick = async (e) => {
     const { lat, lng } = e.latlng;
     setMarkerPosition([lat, lng]);
@@ -163,10 +170,8 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
     <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 w-[800px] shadow-lg">
       <h3 className="text-white text-lg mb-4">{t('search.setLocation')}</h3>
 
-
-
       <div className="flex gap-4">
-        {/* Map Section */}
+        {/* Map container with interactive features */}
         <div className="flex-1">
           <div className="h-64 rounded-lg overflow-hidden border border-gray-700">
             <MapContainer
@@ -214,9 +219,9 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
           </div>
         </div>
 
-        {/* Controls Section */}
+        {/* Location search controls and settings */}
         <div className="w-72 space-y-4">
-          {/* Search Input */}
+          {/* Search input with results dropdown */}
           <div className="relative">
             <div className="relative">
               <input
@@ -233,7 +238,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
               )}
             </div>
 
-            {/* Search Results Dropdown */}
+            {/* Search results dropdown */}
             {searchResults.length > 0 && (
               <div className="absolute w-full mt-1 bg-gray-700 rounded-lg shadow-lg border border-gray-600 z-10">
                 {searchResults.map((result, index) => (
@@ -249,7 +254,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
             )}
           </div>
 
-          {/* Current Location Button */}
+          {/* Current location button */}
           <button
             onClick={handleCurrentLocation}
             disabled={isLoadingLocation}
@@ -263,7 +268,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
             {t('search.currentLocation')}
           </button>
 
-          {/* Radius Slider */}
+          {/* Search radius slider */}
           <div className="space-y-2">
             <label className="block text-sm text-gray-400">
             {t('search.searchRadius')}: {radius} km
@@ -282,7 +287,7 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
             </div>
           </div>
 
-          {/* Confirm Button */}
+          {/* Confirm location button */}
           <button
             onClick={handleConfirm}
             disabled={!address}
@@ -292,9 +297,6 @@ const LocationSearch = ({ onLocationSelect, onClose }) => {
               }`}
           >
             {t('search.confirmLocation')}
-
-
-
           </button>
         </div>
       </div>
