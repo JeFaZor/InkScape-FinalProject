@@ -55,17 +55,17 @@ const SignUpForm = ({ formData, setFormData }) => {
   const getStyleTranslation = (style) => {
     const styleMap = {
       'Traditional': t('styles.traditional'),
-      'New School': t('styles.newSchool'),
+      'New School': t('styles.newschool'),
       'Japanese': t('styles.japanese'),
       'Fineline': t('styles.fineline'),
       'Geometric': t('styles.geometric'),
-      'Micro Realism': t('styles.microRealism'),
+      'Micro Realism': t('styles.microrealism'),
       'Realism': t('styles.realism'),
-      'Dot Work': t('styles.dotWork'),
-      'Dark Art': t('styles.darkArt'),
+      'Dot Work': t('styles.dotwork'),
+      'Dark Art': t('styles.darkart'),
       'Flowers': t('styles.flowers'),
       'Surrealism': t('styles.surrealism'),
-      'Trash Polka': t('styles.trashPolka')
+      'Trash Polka': t('styles.trashpolka')
     };
     return styleMap[style] || style;
   };
