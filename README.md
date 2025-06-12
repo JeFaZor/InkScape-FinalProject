@@ -11,7 +11,6 @@ INKSCAPE is an innovative platform designed to revolutionize how people find tat
 ### Smart Search & Discovery
 - **Style-based search**: Browse artists by tattoo styles and specializations
 - **Geographic search**: Find artists by location with radius filtering
-- **Tag-based filtering**: Filter by specific attributes (color, size, style elements)
 - **Text search**: Search by artist name or bio content
 
 ### AI-Powered Image Analysis
